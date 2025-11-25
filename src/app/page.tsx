@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
+import CampCardSkeleton from '@/components/CampCardSkeleton';
 
 interface Camp {
   id: string;
@@ -157,10 +158,17 @@ export default function Home() {
         />
 
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading camps...</p>
-          </div>
+          <>
+            <div className="mb-4">
+              <p className="text-gray-600">Loading camps...</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <CampCardSkeleton key={`skeleton-${idx}`} />
+              ))}
+            </div>
+          </>
         )}
 
         {error && (
