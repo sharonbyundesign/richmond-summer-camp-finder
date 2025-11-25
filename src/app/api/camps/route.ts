@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// Type for the camp query result with relations
+type CampWithRelations = {
+  id: string;
+  name: string;
+  location?: string;
+  min_age?: number;
+  max_age?: number;
+  description?: string;
+  website_url?: string;
+  camp_sessions?: Array<{
+    start_date?: string;
+    end_date?: string;
+    label?: string;
+  }>;
+  camp_interests?: Array<{
+    tag?: string;
+  }>;
+};
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -53,7 +72,7 @@ export async function GET(request: Request) {
     }
 
     // Filter camps based on query parameters
-    let filteredCamps = data;
+    let filteredCamps: CampWithRelations[] = data as CampWithRelations[];
 
     // Filter by age: age must be between min_age and max_age
     if (age) {
@@ -71,8 +90,8 @@ export async function GET(request: Request) {
     if (interests.length > 0) {
       filteredCamps = filteredCamps.filter(camp => {
         const campTags = (camp.camp_interests || [])
-          .map((ci: any) => ci?.tag)
-          .filter((tag: string) => tag != null);
+          .map((ci) => ci?.tag)
+          .filter((tag): tag is string => tag != null);
         return interests.some(interest => campTags.includes(interest));
       });
     }
@@ -84,7 +103,7 @@ export async function GET(request: Request) {
         if (!isNaN(weekDate.getTime())) {
           filteredCamps = filteredCamps.filter(camp => {
             const sessions = camp.camp_sessions || [];
-            return sessions.some((session: any) => {
+            return sessions.some((session) => {
               if (!session.start_date || !session.end_date) return false;
               
               try {

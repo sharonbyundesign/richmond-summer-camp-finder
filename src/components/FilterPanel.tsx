@@ -66,7 +66,7 @@ export default function FilterPanel({
         {/* Age Filter */}
         <div>
           <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-            Child's Age
+            Child&apos;s Age
           </label>
           <input
             type="number"
