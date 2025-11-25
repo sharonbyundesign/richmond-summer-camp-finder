@@ -22,6 +22,21 @@ type CampWithRelations = {
 
 export async function GET(request: Request) {
   try {
+    // Check environment variables first
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        {
+          error: 'Server configuration error',
+          details: 'Supabase credentials are not configured. Please check your environment variables.',
+          camps: []
+        },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const age = searchParams.get('age');
     const interests = searchParams.getAll('interest'); // ?interest=STEM&interest=Art
