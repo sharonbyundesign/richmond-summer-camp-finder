@@ -9,14 +9,14 @@ interface Camp {
   id: string;
   name: string;
   location?: string;
-  min_age?: number;
-  max_age?: number;
   description?: string;
   website_url?: string;
   camp_sessions?: Array<{
     start_date: string;
     end_date: string;
     label?: string;
+    min_age?: number;
+    max_age?: number;
   }>;
   camp_interests?: Array<{
     tag: string;

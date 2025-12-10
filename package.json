@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/types/database.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -23,7 +24,8 @@
     "postcss": "^8.4.40",
     "tailwindcss": "^3.4.7",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.5"
+    "eslint-config-next": "^14.2.5",
+    "supabase": "^1.200.0"
   }
 }
 

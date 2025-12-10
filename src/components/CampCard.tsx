@@ -3,14 +3,14 @@ interface CampCardProps {
     id: string;
     name: string;
     location?: string;
-    min_age?: number;
-    max_age?: number;
     description?: string;
     website_url?: string;
     camp_sessions?: Array<{
       start_date: string;
       end_date: string;
       label?: string;
+      min_age?: number;
+      max_age?: number;
     }>;
     camp_interests?: Array<{
       tag: string;
@@ -43,11 +43,24 @@ export default function CampCard({ camp }: CampCardProps) {
             </p>
           )}
 
-          {(camp.min_age || camp.max_age) && (
-            <p className="text-sm text-gray-500 mb-3">
-              Ages {camp.min_age || '?'} - {camp.max_age || '?'}
-            </p>
-          )}
+          {camp.camp_sessions && camp.camp_sessions.length > 0 && (() => {
+            // Get age range from all sessions
+            const allMinAges = camp.camp_sessions
+              .map(s => s.min_age)
+              .filter((age): age is number => age != null);
+            const allMaxAges = camp.camp_sessions
+              .map(s => s.max_age)
+              .filter((age): age is number => age != null);
+            
+            const overallMinAge = allMinAges.length > 0 ? Math.min(...allMinAges) : null;
+            const overallMaxAge = allMaxAges.length > 0 ? Math.max(...allMaxAges) : null;
+            
+            return (overallMinAge != null || overallMaxAge != null) ? (
+              <p className="text-sm text-gray-500 mb-3">
+                Ages {overallMinAge ?? '?'} - {overallMaxAge ?? '?'}
+              </p>
+            ) : null;
+          })()}
 
           {camp.description && (
             <p className="text-gray-700 mb-4 line-clamp-3">{camp.description}</p>
