@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering since we use request.url for query parameters
 export const dynamic = 'force-dynamic';
@@ -36,10 +36,8 @@ type CampWithRelations = {
 export async function GET(request: Request) {
   try {
     // Check environment variables first
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
       return NextResponse.json(
         {
           error: 'Server configuration error',

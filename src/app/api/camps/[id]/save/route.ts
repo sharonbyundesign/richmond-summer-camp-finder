@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -10,6 +10,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Supabase credentials are not configured.' },
+        { status: 500 }
+      );
+    }
+
     const { id: campId } = await params;
     
     // For now, we'll use a simple approach with localStorage on the client side
@@ -50,6 +58,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Supabase credentials are not configured.' },
+        { status: 500 }
+      );
+    }
+
     const { id: campId } = await params;
     
     // Validate camp exists
@@ -79,4 +95,5 @@ export async function DELETE(
     );
   }
 }
+
 

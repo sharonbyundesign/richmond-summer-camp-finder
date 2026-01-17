@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -7,6 +7,14 @@ export const dynamic = 'force-dynamic';
 // GET to fetch sessions by IDs
 export async function GET(request: Request) {
   try {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Server configuration error', details: 'Supabase credentials are not configured.', sessions: [] },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const sessionIds = searchParams.getAll('id'); // ?id=xxx&id=yyy
 
@@ -60,4 +68,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
 

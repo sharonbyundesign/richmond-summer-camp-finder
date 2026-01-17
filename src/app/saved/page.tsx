@@ -5,6 +5,7 @@ import Link from 'next/link';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
+import SessionsCalendar from '@/components/SessionsCalendar';
 
 interface Camp {
   id: string;
@@ -69,8 +70,19 @@ export default function SavedCampsPage() {
   useEffect(() => {
     const savedCamps = JSON.parse(localStorage.getItem('savedCamps') || '[]');
     const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
-    setSavedCampIds(savedCamps);
-    setSavedSessionIds(savedSessions);
+    
+    // Only update state if values have changed
+    setSavedCampIds(prev => {
+      const campsEqual = prev.length === savedCamps.length && 
+        prev.every((id, idx) => id === savedCamps[idx]);
+      return campsEqual ? prev : savedCamps;
+    });
+    
+    setSavedSessionIds(prev => {
+      const sessionsEqual = prev.length === savedSessions.length && 
+        prev.every((id, idx) => id === savedSessions[idx]);
+      return sessionsEqual ? prev : savedSessions;
+    });
   }, []);
 
   // Fetch saved camps from API
@@ -170,33 +182,47 @@ export default function SavedCampsPage() {
     const handleStorageChange = () => {
       const savedCamps = JSON.parse(localStorage.getItem('savedCamps') || '[]');
       const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
-      setSavedCampIds(savedCamps);
-      setSavedSessionIds(savedSessions);
+      
+      setSavedCampIds(prev => {
+        const campsEqual = prev.length === savedCamps.length && 
+          prev.every((id, idx) => id === savedCamps[idx]);
+        return campsEqual ? prev : savedCamps;
+      });
+      
+      setSavedSessionIds(prev => {
+        const sessionsEqual = prev.length === savedSessions.length && 
+          prev.every((id, idx) => id === savedSessions[idx]);
+        return sessionsEqual ? prev : savedSessions;
+      });
     };
 
     // Listen for custom events when localStorage changes in same tab
     const handleCampsUpdated = () => {
       const savedCamps = JSON.parse(localStorage.getItem('savedCamps') || '[]');
-      setSavedCampIds(savedCamps);
+      setSavedCampIds(prev => {
+        const campsEqual = prev.length === savedCamps.length && 
+          prev.every((id, idx) => id === savedCamps[idx]);
+        return campsEqual ? prev : savedCamps;
+      });
     };
 
     const handleSessionsUpdated = () => {
       const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
-      setSavedSessionIds(savedSessions);
+      setSavedSessionIds(prev => {
+        const sessionsEqual = prev.length === savedSessions.length && 
+          prev.every((id, idx) => id === savedSessions[idx]);
+        return sessionsEqual ? prev : savedSessions;
+      });
     };
 
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('savedCampsUpdated', handleCampsUpdated);
     window.addEventListener('savedSessionsUpdated', handleSessionsUpdated);
-    
-    // Also check periodically (for same-tab updates)
-    const interval = setInterval(handleStorageChange, 1000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('savedCampsUpdated', handleCampsUpdated);
       window.removeEventListener('savedSessionsUpdated', handleSessionsUpdated);
-      clearInterval(interval);
     };
   }, []);
 
@@ -316,25 +342,33 @@ export default function SavedCampsPage() {
                 )}
 
                 {!sessionsLoading && sessions.length > 0 && (
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Saved Sessions ({sessions.length})
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                      {sessions.map((session) => {
-                        const camp = session.camps;
-                        if (!camp || !session.id) return null;
-                        return (
-                          <SessionCard
-                            key={session.id}
-                            session={session}
-                            campId={camp.id}
-                            campName={camp.name}
-                          />
-                        );
-                      })}
+                  <>
+                    {/* Calendar View */}
+                    <div className="mb-12">
+                      <SessionsCalendar sessions={sessions} />
                     </div>
-                  </div>
+
+                    {/* Session Cards */}
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                        Saved Sessions ({sessions.length})
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                        {sessions.map((session) => {
+                          const camp = session.camps;
+                          if (!camp || !session.id) return null;
+                          return (
+                            <SessionCard
+                              key={session.id}
+                              session={session}
+                              campId={camp.id}
+                              campName={camp.name}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {!sessionsLoading && !sessionsError && savedSessionIds.length > 0 && sessions.length === 0 && (

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -7,10 +7,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     // Check environment variables first
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
       return NextResponse.json(
         {
           error: 'Server configuration error',

@@ -1,18 +1,16 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function GET() {
   try {
     // Check if environment variables are set
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const supabase = getSupabaseServerClient();
+    if (!supabase) {
       return NextResponse.json(
         {
           success: false,
           error: 'Missing environment variables',
-          details: 'Please ensure .env.local contains NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY',
+          details: 'Please ensure .env.local contains NEXT_PUBLIC_SUPABASE_URL and either NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY',
         },
         { status: 500 }
       );
