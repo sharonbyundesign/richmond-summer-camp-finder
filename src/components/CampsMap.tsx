@@ -137,7 +137,7 @@ export default function CampsMap({ camps }: CampsMapProps) {
 
           return null;
         })
-        .filter((marker): marker is MarkerData => marker !== null);
+        .filter((marker): marker is MarkerData => marker !== null && marker.location !== undefined);
 
       if (!cancelled) {
         setResolvedMarkers(initialMarkers);
