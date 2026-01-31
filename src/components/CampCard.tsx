@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface CampCardProps {
   camp: {
@@ -169,11 +170,12 @@ export default function CampCard({ camp }: CampCardProps) {
       {/* Image Carousel / Placeholder */}
       <div className="w-full h-48 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
         {currentImage ? (
-          <img
+          <Image
             src={currentImage}
             alt={`${camp.name} photo`}
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            className="object-cover"
             onError={() => {
               setImages((prev) => prev.filter((img) => img !== currentImage));
               setImageIndex(0);
