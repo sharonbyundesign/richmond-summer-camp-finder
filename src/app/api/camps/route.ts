@@ -12,6 +12,12 @@ type CampWithRelations = {
   description?: string;
   website_url?: string;
   zipcode_id?: number;
+  zipcode?: {
+    id?: number;
+    zip_code?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
   camp_sessions?: Array<{
     id?: string;
     name?: string;
@@ -85,6 +91,12 @@ export async function GET(request: Request) {
           max_age,
           price,
           capacity
+        ),
+        zipcode:zipcode_id(
+          id,
+          zip_code,
+          latitude,
+          longitude
         ),
         camp_interests(
           id,

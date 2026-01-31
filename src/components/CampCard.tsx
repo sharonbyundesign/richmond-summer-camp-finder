@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 
 interface CampCardProps {
@@ -35,12 +35,85 @@ interface CampCardProps {
 
 export default function CampCard({ camp }: CampCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
+  const [imageIndex, setImageIndex] = useState(0);
 
   // Check if camp is saved on mount
   useEffect(() => {
     const savedCamps = JSON.parse(localStorage.getItem('savedCamps') || '[]');
     setIsSaved(savedCamps.includes(camp.id));
   }, [camp.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const cacheKey = `campImages:v2:${camp.id}`;
+    const loadCache = () => {
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const saveCache = (data: string[]) => {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch {
+        // Ignore cache failures
+      }
+    };
+
+    const fetchImages = async () => {
+      if (!camp.website_url) {
+        setImages([]);
+        return;
+      }
+
+      const cached = loadCache();
+      if (cached) {
+        setImages(cached);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/camps/${camp.id}/images`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled && Array.isArray(data.images)) {
+          setImages(data.images);
+          saveCache(data.images);
+        }
+      } catch {
+        // Ignore image scraping errors
+      }
+    };
+
+    fetchImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [camp.id, camp.website_url]);
+
+  const currentImage = images[imageIndex];
+  const hasCarousel = images.length > 1;
+  const totalDots = useMemo(() => Math.min(images.length, 5), [images.length]);
+
+  const handlePrev = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleNext = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setImageIndex((prev) => (prev + 1) % images.length);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -93,25 +166,76 @@ export default function CampCard({ camp }: CampCardProps) {
       href={`/camps/${camp.id}`}
       className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex flex-col h-full overflow-hidden block"
     >
-      {/* Placeholder Image */}
+      {/* Image Carousel / Placeholder */}
       <div className="w-full h-48 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg
-            className="w-24 h-24 text-white opacity-30"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            />
-          </svg>
-        </div>
+        {currentImage ? (
+          <img
+            src={currentImage}
+            alt={`${camp.name} photo`}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            onError={() => {
+              setImages((prev) => prev.filter((img) => img !== currentImage));
+              setImageIndex(0);
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg
+              className="w-24 h-24 text-white opacity-30"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          </div>
+        )}
+
+        {hasCarousel && (
+          <>
+            <button
+              onClick={handlePrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-gray-700 z-10"
+              aria-label="Previous image"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-gray-700 z-10"
+              aria-label="Next image"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
+
+        {images.length > 1 && (
+          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
+            {Array.from({ length: totalDots }).map((_, idx) => {
+              const isActive = idx === imageIndex % totalDots;
+              return (
+                <span
+                  key={`dot-${idx}`}
+                  className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-white/60'}`}
+                />
+              );
+            })}
+          </div>
+        )}
+
         <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/10 to-transparent"></div>
-        
+
         {/* Save Button */}
         <button
           onClick={handleSaveToggle}

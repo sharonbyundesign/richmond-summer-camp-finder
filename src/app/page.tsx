@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
+
+const CampsMap = dynamic(() => import('@/components/CampsMap'), { ssr: false });
 
 interface Camp {
   id: string;
@@ -13,6 +16,12 @@ interface Camp {
   description?: string;
   website_url?: string;
   zipcode_id?: number;
+  zipcode?: {
+    id?: number;
+    zip_code?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null;
   camp_sessions?: Array<{
     id?: string;
     name?: string;
@@ -277,51 +286,59 @@ export default function Home() {
 
         {/* Main Content */}
         <div className="flex-1 min-w-0">
-          {loading && (
-            <>
-              <div className="mb-4">
-                <p className="text-gray-600">Loading camps...</p>
-              </div>
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] gap-6">
+            <div>
+              {loading && (
+                <>
+                  <div className="mb-4">
+                    <p className="text-gray-600">Loading camps...</p>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                {Array.from({ length: 6 }).map((_, idx) => (
-                  <CampCardSkeleton key={`skeleton-${idx}`} />
-                ))}
-              </div>
-            </>
-          )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                    {Array.from({ length: 6 }).map((_, idx) => (
+                      <CampCardSkeleton key={`skeleton-${idx}`} />
+                    ))}
+                  </div>
+                </>
+              )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <p className="text-red-800 font-medium">Unable to load camps</p>
-                  <p className="text-red-700 text-sm mt-1">{error}</p>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <p className="text-red-800 font-medium">Unable to load camps</p>
+                      <p className="text-red-700 text-sm mt-1">{error}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {!loading && !error && (
+                <>
+                  <div className="mb-4">
+                    <p className="text-gray-600">
+                      {camps.length === 0
+                        ? 'No camps found. Try adjusting your filters.'
+                        : `Found ${camps.length} camp${camps.length === 1 ? '' : 's'}`}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                    {camps.map((camp) => (
+                      <CampCard key={camp.id} camp={camp} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )}
 
-          {!loading && !error && (
-            <>
-              <div className="mb-4">
-                <p className="text-gray-600">
-                  {camps.length === 0
-                    ? 'No camps found. Try adjusting your filters.'
-                    : `Found ${camps.length} camp${camps.length === 1 ? '' : 's'}`}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                {camps.map((camp) => (
-                  <CampCard key={camp.id} camp={camp} />
-                ))}
-              </div>
-            </>
-          )}
+            <div className="xl:sticky xl:top-6 h-fit">
+              <CampsMap camps={camps} />
+            </div>
+          </div>
         </div>
       </div>
     </main>
