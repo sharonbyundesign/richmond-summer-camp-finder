@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
+import { Lexend } from "next/font/google";
 import "./globals.css";
+
+const lexend = Lexend({
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: "Richmond Summer Camp Finder",
@@ -13,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={lexend.className}>{children}</body>
     </html>
   );
 }

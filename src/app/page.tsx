@@ -184,110 +184,92 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 sm:pt-8 pb-4">
-        <div className="flex items-center justify-between mb-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-4 sm:pt-6 pb-4 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-30">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
               Richmond Summer Camp Finder
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm text-gray-500">
               Find the perfect summer camp for your child
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Saved link */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
+              </svg>
+              Filters
+            </button>
             <Link
               href="/saved"
-              className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+              className="text-gray-700 hover:text-gray-900 font-medium text-sm"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
-              <span className="hidden sm:inline">Saved</span>
+              Saved
             </Link>
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              aria-label="Toggle filters"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 px-4 sm:px-6 lg:px-8 xl:px-12 pb-6 sm:pb-8 relative">
-        {/* Mobile backdrop */}
+      <div className="px-4 sm:px-6 lg:px-8 xl:px-12 pb-6 sm:pb-8 relative">
+        {/* Filter overlay */}
         {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <>
+            <div
+              className="fixed inset-0 bg-black/30 z-40"
+              onClick={() => setSidebarOpen(false)}
+            />
+            <aside className="fixed left-1/2 top-20 -translate-x-1/2 w-[92vw] max-w-4xl z-50">
+              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 relative">
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="absolute top-3 right-3 h-9 w-9 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-800"
+                  aria-label="Close filters"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+                <FilterPanel
+                  selectedChildId={selectedChildId}
+                  childrenList={children}
+                  age={age}
+                  interests={interests}
+                  dateRangeStart={dateRangeStart}
+                  dateRangeEnd={dateRangeEnd}
+                  daysOfWeek={daysOfWeek}
+                  timeOfDay={timeOfDay}
+                  zipcode={zipcode}
+                  maxDistance={maxDistance}
+                  minPrice={minPrice}
+                  maxPrice={maxPrice}
+                  hideConflicts={hideConflicts}
+                  availableInterests={availableInterests}
+                  onChildChange={setSelectedChildId}
+                  onAgeChange={setAge}
+                  onInterestsChange={setInterests}
+                  onDateRangeStartChange={setDateRangeStart}
+                  onDateRangeEndChange={setDateRangeEnd}
+                  onDaysOfWeekChange={setDaysOfWeek}
+                  onTimeOfDayChange={setTimeOfDay}
+                  onZipcodeChange={setZipcode}
+                  onMaxDistanceChange={setMaxDistance}
+                  onMinPriceChange={setMinPrice}
+                  onMaxPriceChange={setMaxPrice}
+                  onHideConflictsChange={setHideConflicts}
+                />
+              </div>
+            </aside>
+          </>
         )}
 
-        {/* Sidebar */}
-        <aside
-          className={`${
-            sidebarOpen ? 'block' : 'hidden'
-          } lg:block lg:sticky lg:top-6 lg:self-start w-full lg:w-80 flex-shrink-0 relative z-50 lg:z-auto`}
-        >
-          <FilterPanel
-            selectedChildId={selectedChildId}
-            childrenList={children}
-            age={age}
-            interests={interests}
-            dateRangeStart={dateRangeStart}
-            dateRangeEnd={dateRangeEnd}
-            daysOfWeek={daysOfWeek}
-            timeOfDay={timeOfDay}
-            zipcode={zipcode}
-            maxDistance={maxDistance}
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            hideConflicts={hideConflicts}
-            availableInterests={availableInterests}
-            onChildChange={setSelectedChildId}
-            onAgeChange={setAge}
-            onInterestsChange={setInterests}
-            onDateRangeStartChange={setDateRangeStart}
-            onDateRangeEndChange={setDateRangeEnd}
-            onDaysOfWeekChange={setDaysOfWeek}
-            onTimeOfDayChange={setTimeOfDay}
-            onZipcodeChange={setZipcode}
-            onMaxDistanceChange={setMaxDistance}
-            onMinPriceChange={setMinPrice}
-            onMaxPriceChange={setMaxPrice}
-            onHideConflictsChange={setHideConflicts}
-          />
-        </aside>
-
         {/* Main Content */}
-        <div className="flex-1 min-w-0">
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] gap-6">
-            <div>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] gap-6">
+          <div>
               {loading && (
                 <>
                   <div className="mb-4">
@@ -326,18 +308,17 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-5">
                     {camps.map((camp) => (
                       <CampCard key={camp.id} camp={camp} />
                     ))}
                   </div>
                 </>
               )}
-            </div>
+          </div>
 
-            <div className="xl:sticky xl:top-6 h-fit">
-              <CampsMap camps={camps} />
-            </div>
+          <div className="xl:sticky xl:top-24 h-fit">
+            <CampsMap camps={camps} />
           </div>
         </div>
       </div>

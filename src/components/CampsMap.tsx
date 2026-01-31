@@ -308,7 +308,7 @@ export default function CampsMap({ camps }: CampsMapProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-base font-semibold text-gray-900">Map View</h3>
         <span className="text-xs text-gray-500">
@@ -318,7 +318,7 @@ export default function CampsMap({ camps }: CampsMapProps) {
       <p className="text-xs text-gray-500 mb-3">
         Using camp addresses for map pins. {isGeocoding ? 'Finding locations…' : ' '}
       </p>
-      <div className="h-[50vh] xl:h-[70vh] w-full rounded-md overflow-hidden border border-gray-200">
+      <div className="h-[60vh] xl:h-[78vh] w-full rounded-xl overflow-hidden border border-gray-200">
         <MapContainer
           center={[center.lat, center.lng]}
           zoom={DEFAULT_ZOOM}
