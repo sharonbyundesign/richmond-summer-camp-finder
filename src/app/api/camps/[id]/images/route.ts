@@ -25,7 +25,7 @@ export async function GET(
       .from('camps')
       .select('website_url')
       .eq('id', campId)
-      .single();
+      .single<{ website_url: string | null }>();
 
     if (error || !data) {
       return NextResponse.json({ images: [] });
