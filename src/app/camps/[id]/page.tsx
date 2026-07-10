@@ -192,7 +192,7 @@ export default function CampDetailPage() {
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-6">
           <div className="flex flex-col md:flex-row">
             {/* Camp Image (curated) or placeholder — same landscape ratio as the camp card, left side */}
-            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 aspect-video bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
+            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 aspect-video bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
               {camp.image_url ? (
                 <Image
                   src={camp.image_url}
@@ -205,7 +205,7 @@ export default function CampDetailPage() {
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <svg
-                    className="w-32 h-32 text-white opacity-30"
+                    className="w-32 h-32 text-white opacity-70"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -214,7 +214,7 @@ export default function CampDetailPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.5}
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
                     />
                   </svg>
                 </div>
