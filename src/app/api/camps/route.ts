@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { normalizeInterest, toCategories } from '@/lib/interest-categories';
 
 // Force dynamic rendering since we use request.url for query parameters
 export const dynamic = 'force-dynamic';
@@ -162,13 +163,19 @@ export async function GET(request: Request) {
       }
     }
 
-    // Filter by interests: camp must have at least one of the selected interest tags
+    // Filter by interests: camp must have at least one of the selected
+    // categories. Both sides are normalized to the canonical 9-category
+    // taxonomy so a selected "STEM" matches a camp still tagged "Drones"/"LEGO"
+    // even before the DB consolidation migration has been applied.
     if (interests.length > 0) {
+      const selected = new Set(
+        interests.map((i) => normalizeInterest(i) ?? i)
+      );
       filteredCamps = filteredCamps.filter(camp => {
-        const campTags = (camp.camp_interests || [])
-          .map((ci) => ci?.tag || ci?.interest_name)
-          .filter((tag): tag is string => tag != null);
-        return interests.some(interest => campTags.includes(interest));
+        const campCategories = toCategories(
+          (camp.camp_interests || []).map((ci) => ci?.tag || ci?.interest_name)
+        );
+        return campCategories.some((cat) => selected.has(cat));
       });
     }
 

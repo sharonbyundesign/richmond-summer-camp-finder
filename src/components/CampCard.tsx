@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { categoryIcon, toCategories } from '@/lib/interest-categories';
 
 interface CampCardProps {
   camp: {
@@ -290,18 +291,24 @@ export default function CampCard({ camp }: CampCardProps) {
           </a>
         )}
 
-        {camp.camp_interests && camp.camp_interests.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {camp.camp_interests.map((interest, idx) => (
-              <span
-                key={interest.id || idx}
-                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
-              >
-                {interest.tag || interest.interest_name}
-              </span>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const categories = toCategories(
+            (camp.camp_interests || []).map((i) => i.tag || i.interest_name)
+          );
+          return categories.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {categories.map((category) => (
+                <span
+                  key={category}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+                >
+                  <span aria-hidden="true">{categoryIcon(category)}</span>
+                  {category}
+                </span>
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {camp.camp_sessions && camp.camp_sessions.length > 0 && (() => {
           // Calculate date range from all sessions

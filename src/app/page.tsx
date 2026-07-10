@@ -181,6 +181,20 @@ export default function Home() {
     fetchCamps();
   }, [fetchCamps]);
 
+  // Count of active filters, shown as a badge on the Filters button.
+  const activeFilterCount =
+    interests.length +
+    daysOfWeek.length +
+    (age ? 1 : 0) +
+    (dateRangeStart ? 1 : 0) +
+    (dateRangeEnd ? 1 : 0) +
+    (timeOfDay ? 1 : 0) +
+    (zipcode ? 1 : 0) +
+    (maxDistance ? 1 : 0) +
+    (minPrice ? 1 : 0) +
+    (maxPrice ? 1 : 0) +
+    (hideConflicts ? 1 : 0);
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -197,12 +211,21 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
+                activeFilterCount > 0
+                  ? 'border-blue-600 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 12h12M10 20h4" />
               </svg>
               Filters
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
             <Link
               href="/saved"

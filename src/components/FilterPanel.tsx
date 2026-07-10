@@ -1,5 +1,7 @@
 'use client';
 
+import { categoryIcon } from '@/lib/interest-categories';
+
 interface FilterPanelProps {
   // Child selection
   selectedChildId?: string | null;
@@ -150,32 +152,44 @@ export default function FilterPanel({
 
         {/* Interests Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Interests
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {availableInterests.map((interest) => (
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Interests
+              {interests.length > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  {interests.length}
+                </span>
+              )}
+            </label>
+            {interests.length > 0 && (
               <button
-                key={interest}
-                onClick={() => toggleInterest(interest)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  interests.includes(interest)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                onClick={() => onInterestsChange([])}
+                className="text-xs font-medium text-blue-600 hover:text-blue-800"
               >
-                {interest}
+                Clear
               </button>
-            ))}
+            )}
           </div>
-          {interests.length > 0 && (
-            <button
-              onClick={() => onInterestsChange([])}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-            >
-              Clear all
-            </button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {availableInterests.map((interest) => {
+              const selected = interests.includes(interest);
+              return (
+                <button
+                  key={interest}
+                  onClick={() => toggleInterest(interest)}
+                  aria-pressed={selected}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    selected
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <span aria-hidden="true">{categoryIcon(interest)}</span>
+                  {interest}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Date Range Filter */}

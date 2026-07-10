@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { categoryIcon, toCategories } from '@/lib/interest-categories';
 
 interface CampSession {
   id?: string;
@@ -239,18 +240,24 @@ export default function CampDetailPage() {
                 <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
               )}
 
-              {camp.camp_interests && camp.camp_interests.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {camp.camp_interests.map((interest, idx) => (
-                    <span
-                      key={interest.id || idx}
-                      className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
-                    >
-                      {interest.tag || interest.interest_name}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const categories = toCategories(
+                  (camp.camp_interests || []).map((i) => i.tag || i.interest_name)
+                );
+                return categories.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {categories.map((category) => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
+                      >
+                        <span aria-hidden="true">{categoryIcon(category)}</span>
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
 
               {camp.website_url && (
                 <a
