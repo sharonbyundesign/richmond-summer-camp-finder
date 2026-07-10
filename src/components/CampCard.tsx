@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -11,6 +11,7 @@ interface CampCardProps {
     location?: string;
     description?: string;
     website_url?: string;
+    image_url?: string;
     zipcode_id?: number;
     camp_sessions?: Array<{
       id?: string;
@@ -36,8 +37,9 @@ interface CampCardProps {
 
 export default function CampCard({ camp }: CampCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
-  const [imageIndex, setImageIndex] = useState(0);
+  const [images, setImages] = useState<string[]>(
+    camp.image_url ? [camp.image_url] : []
+  );
 
   // Check if camp is saved on mount
   useEffect(() => {
@@ -47,6 +49,18 @@ export default function CampCard({ camp }: CampCardProps) {
 
   useEffect(() => {
     let cancelled = false;
+
+    // The curated image from the database is preferred; a scraped website
+    // image is used only as a fallback when there is no curated one.
+    const primary = camp.image_url ? [camp.image_url] : [];
+    const mergeWithPrimary = (scraped: string[]) => {
+      const seen = new Set<string>();
+      return [...primary, ...scraped].filter((url) => {
+        if (!url || seen.has(url)) return false;
+        seen.add(url);
+        return true;
+      });
+    };
 
     const cacheKey = `campImages:v2:${camp.id}`;
     const loadCache = () => {
@@ -69,27 +83,31 @@ export default function CampCard({ camp }: CampCardProps) {
     };
 
     const fetchImages = async () => {
+      // No website to scrape — just show the curated image (if any).
       if (!camp.website_url) {
-        setImages([]);
+        setImages(mergeWithPrimary([]));
         return;
       }
 
       const cached = loadCache();
       if (cached) {
-        setImages(cached);
+        setImages(mergeWithPrimary(cached));
         return;
       }
 
       try {
         const response = await fetch(`/api/camps/${camp.id}/images`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          setImages(mergeWithPrimary([]));
+          return;
+        }
         const data = await response.json();
         if (!cancelled && Array.isArray(data.images)) {
-          setImages(data.images);
+          setImages(mergeWithPrimary(data.images));
           saveCache(data.images);
         }
       } catch {
-        // Ignore image scraping errors
+        // Ignore image scraping errors — the curated image still shows.
       }
     };
 
@@ -98,23 +116,9 @@ export default function CampCard({ camp }: CampCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [camp.id, camp.website_url]);
+  }, [camp.id, camp.website_url, camp.image_url]);
 
-  const currentImage = images[imageIndex];
-  const hasCarousel = images.length > 1;
-  const totalDots = useMemo(() => Math.min(images.length, 5), [images.length]);
-
-  const handlePrev = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
-
-  const handleNext = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setImageIndex((prev) => (prev + 1) % images.length);
-  };
+  const currentImage = images[0];
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -167,7 +171,7 @@ export default function CampCard({ camp }: CampCardProps) {
       href={`/camps/${camp.id}`}
       className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex flex-col h-full overflow-hidden block"
     >
-      {/* Image Carousel / Placeholder */}
+      {/* Image / Placeholder */}
       <div className="w-full h-48 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
         {currentImage ? (
           <Image
@@ -178,7 +182,6 @@ export default function CampCard({ camp }: CampCardProps) {
             className="object-cover"
             onError={() => {
               setImages((prev) => prev.filter((img) => img !== currentImage));
-              setImageIndex(0);
             }}
           />
         ) : (
@@ -196,43 +199,6 @@ export default function CampCard({ camp }: CampCardProps) {
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
               />
             </svg>
-          </div>
-        )}
-
-        {hasCarousel && (
-          <>
-            <button
-              onClick={handlePrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-gray-700 z-10"
-              aria-label="Previous image"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-gray-700 z-10"
-              aria-label="Next image"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </>
-        )}
-
-        {images.length > 1 && (
-          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5 z-10">
-            {Array.from({ length: totalDots }).map((_, idx) => {
-              const isActive = idx === imageIndex % totalDots;
-              return (
-                <span
-                  key={`dot-${idx}`}
-                  className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-white/60'}`}
-                />
-              );
-            })}
           </div>
         )}
 

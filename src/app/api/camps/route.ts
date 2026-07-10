@@ -11,6 +11,9 @@ type CampWithRelations = {
   location?: string;
   description?: string;
   website_url?: string;
+  image_url?: string;
+  latitude?: number;
+  longitude?: number;
   zipcode_id?: number;
   zipcode?: {
     id?: number;
@@ -77,6 +80,9 @@ export async function GET(request: Request) {
         location,
         description,
         website_url,
+        image_url,
+        latitude,
+        longitude,
         zipcode_id,
         camp_sessions(
           id,
