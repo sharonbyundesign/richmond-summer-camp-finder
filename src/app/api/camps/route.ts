@@ -3,6 +3,10 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering since we use request.url for query parameters
 export const dynamic = 'force-dynamic';
+// Never serve a cached Supabase response — `force-dynamic` only affects
+// rendering, not Next's Data Cache for the outbound fetch, so deletes/edits
+// in Supabase must be reflected immediately.
+export const fetchCache = 'force-no-store';
 
 // Type for the camp query result with relations
 type CampWithRelations = {

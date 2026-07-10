@@ -3,6 +3,8 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
+// Never serve a cached Supabase response so DB changes show up immediately.
+export const fetchCache = 'force-no-store';
 
 export async function GET(
   request: Request,
