@@ -12,6 +12,8 @@ type CampMapItem = {
   location?: string;
   description?: string;
   website_url?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   zipcode?: {
     id?: number;
     zip_code?: string | null;
@@ -109,6 +111,23 @@ export default function CampsMap({ camps }: CampsMapProps) {
 
       const initialMarkers = camps
         .map((camp) => {
+          // 1. Prefer coordinates stored directly on the camp (pre-geocoded).
+          if (
+            typeof camp.latitude === 'number' &&
+            typeof camp.longitude === 'number'
+          ) {
+            return {
+              id: camp.id,
+              name: camp.name,
+              location: camp.location,
+              lat: camp.latitude,
+              lng: camp.longitude,
+              zip: camp.zipcode?.zip_code || undefined,
+              camp,
+            };
+          }
+
+          // 2. Fall back to coordinates from the zipcode relation.
           const lat = camp.zipcode?.latitude;
           const lng = camp.zipcode?.longitude;
           if (typeof lat === 'number' && typeof lng === 'number') {
@@ -123,6 +142,7 @@ export default function CampsMap({ camps }: CampsMapProps) {
             };
           }
 
+          // 3. Fall back to a previously cached live-geocode result.
           const cached = cache[camp.id];
           if (cached) {
             return {
@@ -144,11 +164,14 @@ export default function CampsMap({ camps }: CampsMapProps) {
       }
 
       const pending = camps.filter((camp) => {
+        const hasStoredCoords =
+          typeof camp.latitude === 'number' &&
+          typeof camp.longitude === 'number';
         const hasZipCoords =
           typeof camp.zipcode?.latitude === 'number' &&
           typeof camp.zipcode?.longitude === 'number';
         const hasCache = !!cache[camp.id];
-        return !hasZipCoords && !hasCache && !!camp.location;
+        return !hasStoredCoords && !hasZipCoords && !hasCache && !!camp.location;
       });
 
       if (pending.length === 0) return;

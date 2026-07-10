@@ -32,6 +32,7 @@ export async function GET(
         location,
         description,
         website_url,
+        image_url,
         zipcode_id,
         created_at,
         updated_at,

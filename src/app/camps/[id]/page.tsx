@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface CampSession {
   id?: string;
@@ -31,6 +32,7 @@ interface Camp {
   location?: string;
   description?: string;
   website_url?: string;
+  image_url?: string;
   zipcode_id?: number;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
@@ -188,23 +190,34 @@ export default function CampDetailPage() {
 
         {/* Camp Header */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-6">
-          {/* Placeholder Image */}
+          {/* Camp Image (curated) or placeholder */}
           <div className="w-full h-64 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg
-                className="w-32 h-32 text-white opacity-30"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </div>
+            {camp.image_url ? (
+              <Image
+                src={camp.image_url}
+                alt={`${camp.name} photo`}
+                fill
+                sizes="(max-width: 1024px) 100vw, 1024px"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg
+                  className="w-32 h-32 text-white opacity-30"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              </div>
+            )}
           </div>
 
           {/* Camp Info */}
