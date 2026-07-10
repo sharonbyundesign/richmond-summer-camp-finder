@@ -35,4 +35,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local source images (served from Supabase Storage, not needed in repo)
+/src/images/
+
 
