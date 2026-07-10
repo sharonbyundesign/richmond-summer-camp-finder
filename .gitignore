@@ -39,3 +39,6 @@ next-env.d.ts
 /src/images/
 
 
+
+# local db backups
+camp_sessions-backup-*.json
