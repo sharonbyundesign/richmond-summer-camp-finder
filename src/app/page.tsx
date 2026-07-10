@@ -13,6 +13,8 @@ import {
   parseFiltersFromParams,
   filtersToSearchParams,
   countActiveFilters,
+  weekMonthName,
+  isWeekPast,
 } from '@/lib/campFilters';
 
 const CampsMap = dynamic(() => import('@/components/CampsMap'), { ssr: false });
@@ -75,6 +77,23 @@ function Home() {
   const [error, setError] = useState<string | null>(null);
   const [availableInterests, setAvailableInterests] = useState<string[]>([]);
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
+
+  // Promo banner: non-past July/August start-weeks derived from real data.
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const summerWeeks = useMemo(
+    () =>
+      weeks
+        .map((w) => w.weekStart)
+        .filter((ws) => {
+          const month = weekMonthName(ws);
+          return (month === 'July' || month === 'August') && !isWeekPast(ws);
+        }),
+    [weeks],
+  );
+  const summerApplied =
+    summerWeeks.length > 0 &&
+    summerWeeks.every((ws) => applied.weeks.includes(ws));
+  const showSummerBanner = !bannerDismissed && summerWeeks.length > 0 && !summerApplied;
 
   // Filter panel (staged filters + live count)
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -190,10 +209,52 @@ function Home() {
     setStaged(emptyFilters());
   };
 
+  // Banner action: layer the non-past July/August weeks onto the current
+  // filters. Selecting only future weeks inherently drops past sessions.
+  const applySummerFilter = () => {
+    const next: Filters = { ...applied, weeks: summerWeeks };
+    const query = filtersToSearchParams(next).toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
+
   const activeFilterCount = countActiveFilters(applied);
 
   return (
     <main className="min-h-screen bg-gray-50">
+      {/* Promo banner: July & August availability */}
+      {showSummerBanner && (
+        <div className="relative z-40 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <button
+            type="button"
+            onClick={applySummerFilter}
+            className="group w-full text-left"
+          >
+            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-2.5 pr-12 flex items-center gap-3">
+              <span className="text-lg leading-none" aria-hidden="true">☀️</span>
+              <p className="text-sm font-medium">
+                Spots still open for July &amp; August!
+                <span className="ml-2 inline-flex items-center gap-1 font-semibold underline decoration-white/40 underline-offset-2 group-hover:decoration-white">
+                  See available camps
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setBannerDismissed(true)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+            aria-label="Dismiss banner"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-4 sm:pt-6 pb-4 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-30">
         <div className="flex items-center justify-between gap-4">
