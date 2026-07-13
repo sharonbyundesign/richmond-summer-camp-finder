@@ -5,9 +5,10 @@ interface FilterPanelProps {
   selectedChildId?: string | null;
   childrenList?: Array<{ id: number; name: string; age: number }>;
   
-  // Age (fallback if no child selected)
-  age: string;
-  
+  // Age (fallback if no child selected). Omit onAgeChange to hide the section —
+  // v2 surfaces age in the search pill instead.
+  age?: string;
+
   // Filters
   interests: string[];
   dateRangeStart?: string;
@@ -25,7 +26,7 @@ interface FilterPanelProps {
   
   // Handlers
   onChildChange?: (childId: string | null) => void;
-  onAgeChange: (age: string) => void;
+  onAgeChange?: (age: string) => void;
   onInterestsChange: (interests: string[]) => void;
   onDateRangeStartChange?: (date: string) => void;
   onDateRangeEndChange?: (date: string) => void;
@@ -43,7 +44,7 @@ const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 export default function FilterPanel({
   selectedChildId,
   childrenList = [],
-  age,
+  age = '',
   interests,
   dateRangeStart,
   dateRangeEnd,
@@ -106,7 +107,7 @@ export default function FilterPanel({
                 const value = e.target.value;
                 onChildChange(value === '' ? null : value);
                 // Auto-fill age if child is selected
-                if (value && childrenList.length > 0) {
+                if (value && childrenList.length > 0 && onAgeChange) {
                   const child = childrenList.find(c => c.id.toString() === value);
                   if (child) {
                     onAgeChange(child.age.toString());
@@ -126,27 +127,29 @@ export default function FilterPanel({
         )}
 
         {/* Age Filter (shown if no child selected or always) */}
-        <div>
-          <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-            {selectedChild ? `Child's Age (${selectedChild.name})` : "Child's Age"}
-          </label>
-          <input
-            type="number"
-            id="age"
-            min="0"
-            max="18"
-            value={selectedChild ? selectedChild.age.toString() : age}
-            onChange={(e) => onAgeChange(e.target.value)}
-            placeholder="Enter age"
-            disabled={!!selectedChild}
-            className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-              selectedChild ? 'bg-gray-100 cursor-not-allowed' : ''
-            }`}
-          />
-          {selectedChild && (
-            <p className="mt-1 text-xs text-gray-500">Age is set from selected child</p>
-          )}
-        </div>
+        {onAgeChange && (
+          <div>
+            <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
+              {selectedChild ? `Child's Age (${selectedChild.name})` : "Child's Age"}
+            </label>
+            <input
+              type="number"
+              id="age"
+              min="0"
+              max="18"
+              value={selectedChild ? selectedChild.age.toString() : age}
+              onChange={(e) => onAgeChange(e.target.value)}
+              placeholder="Enter age"
+              disabled={!!selectedChild}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                selectedChild ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
+            />
+            {selectedChild && (
+              <p className="mt-1 text-xs text-gray-500">Age is set from selected child</p>
+            )}
+          </div>
+        )}
 
         {/* Interests Filter */}
         <div>
