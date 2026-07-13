@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
+import posthog from 'posthog-js';
 
 interface CampCardProps {
   /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
@@ -150,7 +151,8 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
       // Unsave
       newSavedCamps = savedCamps.filter((id: string) => id !== camp.id);
       setIsSaved(false);
-      
+      posthog.capture('camp_unsaved', { camp_id: camp.id, camp_name: camp.name });
+
       // Call API to unsave (for future database integration)
       try {
         await fetch(`/api/camps/${camp.id}/save`, { method: 'DELETE' });
@@ -161,7 +163,8 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
       // Save
       newSavedCamps = [...savedCamps, camp.id];
       setIsSaved(true);
-      
+      posthog.capture('camp_saved', { camp_id: camp.id, camp_name: camp.name });
+
       // Call API to save (for future database integration)
       try {
         await fetch(`/api/camps/${camp.id}/save`, { method: 'POST' });

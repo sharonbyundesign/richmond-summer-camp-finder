@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
+import posthog from 'posthog-js';
 
 interface CampSession {
   id?: string;
@@ -264,6 +265,7 @@ export default function CampDetailPage() {
                   href={camp.website_url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => posthog.capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
                   className="inline-block self-start mt-auto px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
                 >
                   Visit Website
@@ -296,7 +298,8 @@ export default function CampDetailPage() {
                   if (isSaved) {
                     newSavedSessions = savedSessions.filter((id: string) => id !== session.id);
                     setSavedSessionIds(new Set(newSavedSessions));
-                    
+                    posthog.capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'DELETE' });
                     } catch (err) {
@@ -305,7 +308,8 @@ export default function CampDetailPage() {
                   } else {
                     newSavedSessions = [...savedSessions, session.id];
                     setSavedSessionIds(new Set(newSavedSessions));
-                    
+                    posthog.capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'POST' });
                     } catch (err) {
