@@ -23,6 +23,11 @@ interface FilterPanelProps {
   onChange: (patch: Partial<Filters>) => void;
   availableInterests: string[];
   weeks: WeekOption[];
+  // Section visibility. Default true so v1 is unaffected; v2 hides age/weeks/
+  // distance here because those live in its search pill instead.
+  showAges?: boolean;
+  showWeeks?: boolean;
+  showDistance?: boolean;
 }
 
 // Shared pill styling for multi-select chips, matching the interest pills.
@@ -44,6 +49,9 @@ export default function FilterPanel({
   onChange,
   availableInterests,
   weeks,
+  showAges = true,
+  showWeeks = true,
+  showDistance = true,
 }: FilterPanelProps) {
   const [ageInput, setAgeInput] = useState('');
 
@@ -96,6 +104,7 @@ export default function FilterPanel({
   return (
     <div className="space-y-6">
       {/* Kids' ages */}
+      {showAges && (
       <div>
         <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
           Kids&apos; ages
@@ -159,6 +168,7 @@ export default function FilterPanel({
           </label>
         )}
       </div>
+      )}
 
       {/* Interests (unchanged) */}
       <div>
@@ -203,6 +213,7 @@ export default function FilterPanel({
       </div>
 
       {/* Weeks */}
+      {showWeeks && (
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-gray-700">
@@ -259,6 +270,7 @@ export default function FilterPanel({
           </div>
         )}
       </div>
+      )}
 
       {/* Session type */}
       <div>
@@ -295,6 +307,7 @@ export default function FilterPanel({
       </div>
 
       {/* Distance */}
+      {showDistance && (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Distance</label>
         <div className="flex gap-2">
@@ -321,6 +334,7 @@ export default function FilterPanel({
           </select>
         </div>
       </div>
+      )}
     </div>
   );
 }
