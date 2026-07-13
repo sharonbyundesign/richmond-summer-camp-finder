@@ -42,3 +42,4 @@ next-env.d.ts
 
 # local db backups
 camp_sessions-backup-*.json
+.claude/
