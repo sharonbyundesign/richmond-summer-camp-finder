@@ -6,13 +6,17 @@ import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
 
 interface CampCardProps {
+  /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
+  distanceMiles?: number | null;
+  /** Supplied by v2 to sync card hover with the map pin. Its presence also enables the lift. */
+  onHoverChange?: (hovered: boolean) => void;
   camp: {
     id: string;
     name: string;
     location?: string;
     description?: string;
     website_url?: string;
-    image_url?: string;
+    image_url?: string | null;
     zipcode_id?: number;
     camp_sessions?: Array<{
       id?: string;
@@ -36,7 +40,7 @@ interface CampCardProps {
   };
 }
 
-export default function CampCard({ camp }: CampCardProps) {
+export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [images, setImages] = useState<string[]>(
     camp.image_url ? [camp.image_url] : []
@@ -84,7 +88,13 @@ export default function CampCard({ camp }: CampCardProps) {
     };
 
     const fetchImages = async () => {
-      // No website to scrape — just show the curated image (if any).
+      // Supabase now hosts a real photo for most camps. Only fall back to scraping the
+      // camp's own website for the rows that don't have one yet.
+      if (camp.image_url) {
+        setImages([camp.image_url]);
+        return;
+      }
+
       if (!camp.website_url) {
         setImages(mergeWithPrimary([]));
         return;
@@ -170,7 +180,13 @@ export default function CampCard({ camp }: CampCardProps) {
   return (
     <Link
       href={`/camps/${camp.id}`}
-      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 flex flex-col h-full overflow-hidden block"
+      onMouseEnter={onHoverChange ? () => onHoverChange(true) : undefined}
+      onMouseLeave={onHoverChange ? () => onHoverChange(false) : undefined}
+      className={`bg-white rounded-lg shadow-md border border-gray-200 flex flex-col h-full overflow-hidden block ${
+        onHoverChange
+          ? 'transition-all duration-200 hover:-translate-y-1 hover:shadow-xl'
+          : 'hover:shadow-lg transition-shadow'
+      }`}
     >
       {/* Image / Placeholder */}
       <div className="w-full h-48 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
@@ -248,11 +264,23 @@ export default function CampCard({ camp }: CampCardProps) {
         
         {camp.location && (
           <p className="text-gray-600 mb-2 flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {camp.location}
+          </p>
+        )}
+
+        {typeof distanceMiles === 'number' && (
+          <p className="mb-2 inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            {distanceMiles.toFixed(1)} mi away
+          </p>
+        )}
+
+        {distanceMiles === null && (
+          <p className="mb-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+            Distance unknown
           </p>
         )}
 

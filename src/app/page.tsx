@@ -1,151 +1,200 @@
 'use client';
 
-import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
+import SearchPill from '@/components/v2/SearchPill';
+import type { MapMarker } from '@/components/v2/MapPanel';
+import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
+import { buildWeekOptions, campMatchesAges, campMatchesWeeks } from '@/lib/v2/weeks';
+import { lookupZip, campCoord, haversineMiles } from '@/lib/v2/geo';
 import {
-  Filters,
   emptyFilters,
-  parseFiltersFromParams,
   filtersToSearchParams,
   countActiveFilters,
-  weekMonthName,
-  isWeekPast,
+  type Filters,
 } from '@/lib/campFilters';
+import type { Camp } from '@/types/camp';
 
-const CampsMap = dynamic(() => import('@/components/CampsMap'), { ssr: false });
+const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
-interface Camp {
-  id: string;
-  name: string;
-  location?: string;
-  description?: string;
-  website_url?: string;
-  zipcode_id?: number;
-  zipcode?: {
-    id?: number;
-    zip_code?: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-  } | null;
-  camp_sessions?: Array<{
-    id?: string;
-    name?: string;
-    label?: string;
-    start_date: string;
-    end_date: string;
-    start_time?: string;
-    end_time?: string;
-    days_of_week?: string[];
-    min_age?: number;
-    max_age?: number;
-    price?: number;
-    capacity?: number;
-  }>;
-  camp_interests?: Array<{
-    id?: string;
-    tag?: string;
-    interest_name?: string;
-  }>;
+type SortMode = 'distance' | 'az';
+
+const DESKTOP_QUERY = '(min-width: 768px)';
+
+const SPLIT_KEY = 'scouty:v2:split';
+const SPLIT_DEFAULT = 58;
+const SPLIT_MIN = 35;
+const SPLIT_MAX = 72;
+
+const clampSplit = (value: number) => Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, value));
+
+const CARD_MIN_W = 260;
+const CARD_GAP = 20; // gap-5
+const CARD_MAX_COLS = 4;
+
+/**
+ * Card columns track the list column's real width, not the viewport — the split is
+ * draggable, so a breakpoint can't know how much room the cards actually have.
+ */
+function useCardColumns(ref: React.RefObject<HTMLElement>) {
+  const [columns, setColumns] = useState(1);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      const fits = Math.floor((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP));
+      setColumns(Math.min(CARD_MAX_COLS, Math.max(1, fits)));
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return columns;
 }
 
-interface WeekOption {
-  weekStart: string;
-  label: string;
+/** List/map split as a percentage of the row, persisted like the rest of the session state. */
+function useSplit() {
+  const [split, setSplit] = useState(SPLIT_DEFAULT);
+
+  useEffect(() => {
+    const raw = Number(localStorage.getItem(SPLIT_KEY));
+    if (Number.isFinite(raw) && raw > 0) setSplit(clampSplit(raw));
+  }, []);
+
+  const commit = useCallback((value: number) => {
+    const next = clampSplit(value);
+    setSplit(next);
+    try {
+      localStorage.setItem(SPLIT_KEY, String(next));
+    } catch {
+      // Ignore quota / private-mode failures
+    }
+  }, []);
+
+  return { split, setSplit, commit };
 }
 
-function Home() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+/** Drives which single map instance mounts, so we never run two Leaflet maps at once. */
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // Applied filters live in the URL — shareable and survive refresh.
-  const searchKey = searchParams.toString();
-  const applied = useMemo(
-    () => parseFiltersFromParams(searchParams),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [searchKey],
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY);
+    const sync = () => setIsDesktop(query.matches);
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
+  }, []);
+
+  return isDesktop;
+}
+
+export default function Home() {
+  // Pill filters (age / weeks / zip) — applied client-side so results narrow live.
+  const { state: pill, setState: setPill, hydrated } = usePillState();
+
+  // Modal filters — interests / session type / price, on the shared v1 Filters
+  // model and applied server-side. Age, weeks, and zip live in the pill, so the
+  // ages/weeks/zip fields here stay empty and their panel sections are hidden.
+  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const patchFilters = useCallback(
+    (patch: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...patch })),
+    [],
   );
 
-  // Data
   const [camps, setCamps] = useState<Camp[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [allCamps, setAllCamps] = useState<Camp[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableInterests, setAvailableInterests] = useState<string[]>([]);
-  const [weeks, setWeeks] = useState<WeekOption[]>([]);
 
-  // Promo banner: non-past July/August start-weeks derived from real data.
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-  const summerWeeks = useMemo(
-    () =>
-      weeks
-        .map((w) => w.weekStart)
-        .filter((ws) => {
-          const month = weekMonthName(ws);
-          return (month === 'July' || month === 'August') && !isWeekPast(ws);
-        }),
-    [weeks],
-  );
-  const summerApplied =
-    summerWeeks.length > 0 &&
-    summerWeeks.every((ws) => applied.weeks.includes(ws));
-  const showSummerBanner = !bannerDismissed && summerWeeks.length > 0 && !summerApplied;
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mobileMapOpen, setMobileMapOpen] = useState(false);
+  // null = follow the default (distance once a zip is set, A–Z otherwise).
+  const [sortOverride, setSortOverride] = useState<SortMode | null>(null);
+  const [hoveredCampId, setHoveredCampId] = useState<string | null>(null);
+  const [selectedCampId, setSelectedCampId] = useState<string | null>(null);
 
-  // Filter panel (staged filters + live count)
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [staged, setStaged] = useState<Filters>(applied);
-  const [stagedCount, setStagedCount] = useState<number | null>(null);
-  const [countLoading, setCountLoading] = useState(false);
+  const { split, setSplit, commit: commitSplit } = useSplit();
+  const [dragging, setDragging] = useState(false);
+  const splitRowRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
+  const cardColumns = useCardColumns(listRef);
+  const cardGridStyle = { gridTemplateColumns: `repeat(${cardColumns}, minmax(0, 1fr))` };
 
-  // Fetch available interests on mount
+  const splitFromClientX = useCallback((clientX: number) => {
+    const rect = splitRowRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return null;
+    return ((clientX - rect.left) / rect.width) * 100;
+  }, []);
+
+  const isDesktop = useIsDesktop();
+
   useEffect(() => {
     const fetchInterests = async () => {
       try {
         const response = await fetch('/api/interests');
         if (!response.ok) return;
+
         const data = await response.json();
-        if (data.error) return;
-        if (Array.isArray(data.interests)) setAvailableInterests(data.interests);
+        if (data.error || !Array.isArray(data.interests)) return;
+
+        setAvailableInterests(data.interests);
       } catch (err) {
         console.error('Error fetching interests:', err);
       }
     };
+
     fetchInterests();
   }, []);
 
-  // Fetch the list of distinct session weeks on mount
+  // Unfiltered baseline. The week picker is built from this so weeks never vanish
+  // from the picker as the user narrows results.
   useEffect(() => {
-    const fetchWeeks = async () => {
+    const fetchAll = async () => {
       try {
-        const response = await fetch('/api/weeks');
+        const response = await fetch('/api/camps');
         if (!response.ok) return;
+
         const data = await response.json();
-        if (Array.isArray(data.weeks)) setWeeks(data.weeks);
+        if (Array.isArray(data.camps)) setAllCamps(data.camps);
       } catch (err) {
-        console.error('Error fetching weeks:', err);
+        console.error('Error fetching camp baseline:', err);
       }
     };
-    fetchWeeks();
+
+    fetchAll();
   }, []);
 
-  // Fetch camps whenever the applied (URL) filters change.
   const fetchCamps = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const query = filtersToSearchParams(applied).toString();
-      const response = await fetch(`/api/camps${query ? `?${query}` : ''}`);
+      // Only interests / session type / price go to the server; age, weeks, and
+      // zip are held in the pill and narrowed client-side below, so they stay
+      // empty in `filters` and are omitted from the query.
+      const params = filtersToSearchParams(filters);
+
+      const response = await fetch(`/api/camps?${params.toString()}`);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         setError(errorData.error || 'Unable to load camps. Please try again later.');
         setCamps([]);
         return;
       }
+
       const data = await response.json();
+
       if (data.error) {
         setError(data.error);
         setCamps([]);
@@ -159,267 +208,474 @@ function Home() {
     } finally {
       setLoading(false);
     }
-  }, [applied]);
+  }, [filters]);
 
   useEffect(() => {
     fetchCamps();
   }, [fetchCamps]);
 
-  // Live count for the "Show N camps" button — debounced query against the API
-  // using the same filter logic as the results, while the panel is open.
-  const stagedKey = filtersToSearchParams(staged).toString();
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    let cancelled = false;
-    setCountLoading(true);
-    const handle = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/camps?count=1${stagedKey ? `&${stagedKey}` : ''}`);
-        const data = await response.json();
-        if (!cancelled && typeof data.count === 'number') setStagedCount(data.count);
-      } catch (err) {
-        if (!cancelled) console.error('Error fetching count:', err);
-      } finally {
-        if (!cancelled) setCountLoading(false);
+  const zipCenter = useMemo(() => (pill.zip.length === 5 ? lookupZip(pill.zip) : null), [pill.zip]);
+  const zipStatus: 'idle' | 'ok' | 'notfound' =
+    pill.zip.length < 5 ? 'idle' : zipCenter ? 'ok' : 'notfound';
+  const radiusActive = zipCenter !== null;
+
+  const weekOptions = useMemo(() => buildWeekOptions(allCamps), [allCamps]);
+  const selectedWeeks = useMemo(
+    () => weekOptions.filter((week) => pill.weeks.includes(week.key)),
+    [weekOptions, pill.weeks]
+  );
+
+  /** Server-filtered camps, narrowed by age + weeks, then decorated with distance. */
+  const decorated = useMemo(() => {
+    return camps
+      .filter((camp) => campMatchesAges(camp, pill.ages) && campMatchesWeeks(camp, selectedWeeks))
+      .map((camp) => {
+        const coords = campCoord(camp);
+        const distance = coords && zipCenter ? haversineMiles(zipCenter, coords) : null;
+        return { camp, coords, distance };
+      });
+  }, [camps, pill.ages, selectedWeeks, zipCenter]);
+
+  const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'az');
+
+  const sortCamps = useCallback(
+    <T extends { camp: Camp; distance: number | null }>(list: T[]) => {
+      const sorted = [...list];
+
+      if (sort === 'distance') {
+        sorted.sort((a, b) => {
+          if (a.distance === null && b.distance === null) return a.camp.name.localeCompare(b.camp.name);
+          if (a.distance === null) return 1;
+          if (b.distance === null) return -1;
+          return a.distance - b.distance;
+        });
+      } else {
+        sorted.sort((a, b) => a.camp.name.localeCompare(b.camp.name));
       }
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
+
+      return sorted;
+    },
+    [sort]
+  );
+
+  /**
+   * With a zip active: inside the radius is the result set, outside is hidden from the
+   * list but kept on the map, and camps we could never place are shown separately rather
+   * than silently dropped.
+   */
+  const { listed, unplaceable, outOfRadius } = useMemo(() => {
+    if (!radiusActive) {
+      return { listed: sortCamps(decorated), unplaceable: [], outOfRadius: [] };
+    }
+
+    return {
+      listed: sortCamps(decorated.filter((d) => d.distance !== null && d.distance <= pill.radius)),
+      unplaceable: decorated.filter((d) => d.coords === null),
+      outOfRadius: decorated.filter((d) => d.distance !== null && d.distance > pill.radius),
     };
-  }, [stagedKey, sidebarOpen]);
+  }, [decorated, radiusActive, pill.radius, sortCamps]);
 
-  const openPanel = () => {
-    setStaged(applied);
-    setStagedCount(camps.length);
-    setSidebarOpen(true);
-  };
+  const markers: MapMarker[] = useMemo(() => {
+    const toMarker = (
+      entry: { camp: Camp; coords: { lat: number; lng: number } | null; distance: number | null },
+      muted: boolean
+    ): MapMarker[] =>
+      entry.coords
+        ? [
+            {
+              id: entry.camp.id,
+              name: entry.camp.name,
+              location: entry.camp.location,
+              lat: entry.coords.lat,
+              lng: entry.coords.lng,
+              camp: entry.camp,
+              muted,
+              distanceMiles: entry.distance,
+            },
+          ]
+        : [];
 
-  const patchStaged = (patch: Partial<Filters>) => {
-    setStaged((prev) => ({ ...prev, ...patch }));
-  };
+    return [
+      ...listed.flatMap((entry) => toMarker(entry, false)),
+      ...outOfRadius.flatMap((entry) => toMarker(entry, true)),
+    ];
+  }, [listed, outOfRadius]);
 
-  const applyFilters = () => {
-    const query = filtersToSearchParams(staged).toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-    setSidebarOpen(false);
-  };
+  // Ages/weeks/zip stay empty in `filters` (the pill owns them), so this counts
+  // only the modal-owned interests / session type / price selections.
+  const modalFilterCount = countActiveFilters(filters);
+
+  const hasPillSelections = pill.ages.length > 0 || pill.weeks.length > 0 || pill.zip.length > 0;
 
   const clearAll = () => {
-    setStaged(emptyFilters());
+    setPill(EMPTY_PILL);
+    setFilters(emptyFilters());
+    setSortOverride(null);
   };
 
-  // Banner action: layer the non-past July/August weeks onto the current
-  // filters. Selecting only future weeks inherently drops past sessions.
-  const applySummerFilter = () => {
-    const next: Filters = { ...applied, weeks: summerWeeks };
-    const query = filtersToSearchParams(next).toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  };
+  // The full-screen mobile map owns the viewport; let it, rather than the list, take the scroll.
+  useEffect(() => {
+    if (!mobileMapOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileMapOpen]);
 
-  const activeFilterCount = countActiveFilters(applied);
+  useEffect(() => {
+    if (isDesktop) setMobileMapOpen(false);
+  }, [isDesktop]);
+
+  const mapCaption = radiusActive
+    ? `${listed.length} within ${pill.radius} mi`
+    : `${markers.length} camp${markers.length === 1 ? '' : 's'} mapped`;
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Promo banner: July & August availability */}
-      {showSummerBanner && (
-        <div className="relative z-40 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-          <button
-            type="button"
-            onClick={applySummerFilter}
-            className="group w-full text-left"
-          >
-            <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-2.5 pr-12 flex items-center gap-3">
-              <span className="text-lg leading-none" aria-hidden="true">☀️</span>
-              <p className="text-sm font-medium">
-                Spots still open for July &amp; August!
-                <span className="ml-2 inline-flex items-center gap-1 font-semibold underline decoration-white/40 underline-offset-2 group-hover:decoration-white">
-                  See available camps
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setBannerDismissed(true)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors"
-            aria-label="Dismiss banner"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+      {/* Header — fixed 64px (h-16); the sticky map's top offset depends on this. */}
+      <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+        <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <h1 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">
+            Richmond Summer Camp Finder
+          </h1>
+          <Link href="/saved" className="shrink-0 text-sm font-medium text-gray-700 hover:text-gray-900">
+            Saved
+          </Link>
         </div>
+      </header>
+
+      {/* Search pill + active selections */}
+      <div className="border-b border-gray-200 bg-white px-4 pb-4 pt-5 sm:px-6 lg:px-8">
+        <div className="max-w-3xl">
+          <SearchPill
+            state={pill}
+            onChange={setPill}
+            weekOptions={weekOptions}
+            zipStatus={zipStatus}
+            onSearch={() => {
+              /* Results are already live; the button just dismisses the popover. */
+            }}
+          />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {hydrated &&
+            pill.ages.map((age) => (
+              <Chip
+                key={`age-${age}`}
+                label={`Age ${age}`}
+                onRemove={() => setPill({ ...pill, ages: pill.ages.filter((value) => value !== age) })}
+              />
+            ))}
+
+          {hydrated &&
+            selectedWeeks.map((week) => (
+              <Chip
+                key={`week-${week.key}`}
+                label={week.label}
+                onRemove={() => setPill({ ...pill, weeks: pill.weeks.filter((key) => key !== week.key) })}
+              />
+            ))}
+
+          {hydrated && pill.zip.length > 0 && (
+            <Chip label={`${pill.zip} · ${pill.radius} mi`} onRemove={() => setPill({ ...pill, zip: '' })} />
+          )}
+
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+              />
+            </svg>
+            More filters
+            {modalFilterCount > 0 && (
+              <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                {modalFilterCount}
+              </span>
+            )}
+          </button>
+
+          {(hasPillSelections || modalFilterCount > 0) && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-sm font-medium text-gray-600 underline underline-offset-2 hover:text-gray-900"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filters modal — Interests, session type, and price only; age/weeks/zip live in the pill. */}
+      {filtersOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setFiltersOpen(false)} />
+          <aside className="fixed left-1/2 top-20 z-50 w-[92vw] max-w-4xl -translate-x-1/2">
+            <div className="relative max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl sm:p-6">
+              <button
+                onClick={() => setFiltersOpen(false)}
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm hover:text-gray-800"
+                aria-label="Close filters"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">More filters</h2>
+              <FilterPanel
+                filters={filters}
+                onChange={patchFilters}
+                availableInterests={availableInterests}
+                weeks={[]}
+                showAges={false}
+                showWeeks={false}
+                showDistance={false}
+              />
+            </div>
+          </aside>
+        </>
       )}
 
-      {/* Header */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-4 sm:pt-6 pb-4 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-30">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
-              Richmond Summer Camp Finder
-            </h1>
-            <p className="text-sm text-gray-500">
-              Find the perfect summer camp for your child
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Last updated July 10, 2026
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openPanel}
-              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium shadow-sm transition-colors ${
-                activeFilterCount > 0
-                  ? 'border-blue-600 bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M6 12h12M10 20h4" />
-              </svg>
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-            <Link
-              href="/saved"
-              className="text-gray-700 hover:text-gray-900 font-medium text-sm"
-            >
-              Saved
-            </Link>
-          </div>
-        </div>
-      </div>
+      {/* Two-column shell. The list scrolls with the page; the map column sticks.
+          On desktop the columns are separated by a draggable handle. */}
+      <div
+        ref={splitRowRef}
+        className={`grid grid-cols-1 px-4 sm:px-6 lg:px-8 ${dragging ? 'select-none' : ''}`}
+        style={
+          isDesktop
+            ? { gridTemplateColumns: `minmax(0,${split}fr) 20px minmax(0,${100 - split}fr)` }
+            : undefined
+        }
+        onPointerMove={(event) => {
+          if (!dragging) return;
+          const next = splitFromClientX(event.clientX);
+          if (next !== null) setSplit(clampSplit(next));
+        }}
+        onPointerUp={() => {
+          if (!dragging) return;
+          setDragging(false);
+          commitSplit(split);
+        }}
+      >
+        <section ref={listRef} className="min-w-0 py-6 pb-24 md:pb-6">
+          {loading && (
+            <>
+              <p className="mb-4 text-gray-600">Loading camps…</p>
+              <div className="grid gap-5" style={cardGridStyle}>
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <CampCardSkeleton key={`skeleton-${idx}`} />
+                ))}
+              </div>
+            </>
+          )}
 
-      <div className="px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 sm:pt-8 pb-6 sm:pb-8 relative">
-        {/* Filter overlay */}
-        {sidebarOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/30 z-40"
-              onClick={() => setSidebarOpen(false)}
-            />
-            <aside className="fixed left-1/2 top-20 -translate-x-1/2 w-[92vw] max-w-4xl z-50">
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[calc(100vh-7rem)]">
-                <div className="flex items-center justify-between px-4 sm:px-6 pt-5 pb-3 border-b border-gray-100">
-                  <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-                  <button
-                    onClick={() => setSidebarOpen(false)}
-                    className="h-9 w-9 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-800"
-                    aria-label="Close filters"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="overflow-y-auto px-4 sm:px-6 py-5">
-                  <FilterPanel
-                    filters={staged}
-                    onChange={patchStaged}
-                    availableInterests={availableInterests}
-                    weeks={weeks}
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="flex items-start">
+                <svg
+                  className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
                   />
-                </div>
-
-                {/* Footer: Clear all + live-count apply button */}
-                <div className="border-t border-gray-100 px-4 sm:px-6 py-4">
-                  {stagedCount === 0 && (
-                    <p className="text-sm text-amber-600 mb-2 text-right">
-                      No camps match. Try removing a filter.
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between gap-4">
-                    <button
-                      onClick={clearAll}
-                      className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                    >
-                      Clear all
-                    </button>
-                    <button
-                      onClick={applyFilters}
-                      className="inline-flex items-center justify-center rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors"
-                    >
-                      {countLoading || stagedCount === null
-                        ? 'Show camps'
-                        : `Show ${stagedCount} camp${stagedCount === 1 ? '' : 's'}`}
-                    </button>
-                  </div>
+                </svg>
+                <div>
+                  <p className="font-medium text-red-800">Unable to load camps</p>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
                 </div>
               </div>
-            </aside>
-          </>
+            </div>
+          )}
+
+          {!loading && !error && (
+            <>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-gray-600">
+                  {listed.length === 0
+                    ? 'No camps found. Try adjusting your filters.'
+                    : `Found ${listed.length} camp${listed.length === 1 ? '' : 's'}`}
+                  {radiusActive && outOfRadius.length > 0 && (
+                    <span className="text-gray-500">
+                      {' '}
+                      · {outOfRadius.length} outside {pill.radius} mi
+                    </span>
+                  )}
+                </p>
+
+                <div className="inline-flex items-center gap-2">
+                  <label htmlFor="sort" className="text-sm text-gray-600">
+                    Sort
+                  </label>
+                  <select
+                    id="sort"
+                    value={sort}
+                    onChange={(event) => setSortOverride(event.target.value as SortMode)}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="distance">Distance</option>
+                    <option value="az">A–Z</option>
+                  </select>
+                </div>
+              </div>
+
+              {sort === 'distance' && !radiusActive && (
+                <p className="mb-4 text-xs text-amber-700">
+                  Enter a zip code to sort by distance. Showing A–Z until then.
+                </p>
+              )}
+
+              <div className="grid gap-5" style={cardGridStyle}>
+                {listed.map(({ camp, distance }) => (
+                  <CampCard
+                    key={camp.id}
+                    camp={camp}
+                    distanceMiles={radiusActive ? distance : undefined}
+                    onHoverChange={(hovered) => setHoveredCampId(hovered ? camp.id : null)}
+                  />
+                ))}
+              </div>
+
+              {unplaceable.length > 0 && (
+                <div className="mt-8">
+                  <div className="mb-3 border-t border-gray-200 pt-6">
+                    <h2 className="text-sm font-semibold text-gray-900">
+                      {unplaceable.length} camp{unplaceable.length === 1 ? '' : 's'} without a listed address
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      These camps don&apos;t publish a single street address, so we can&apos;t measure their
+                      distance or place them on the map.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-5" style={cardGridStyle}>
+                    {unplaceable.map(({ camp }) => (
+                      <CampCard key={camp.id} camp={camp} distanceMiles={null} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        {isDesktop && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize list and map"
+            aria-valuenow={Math.round(split)}
+            aria-valuemin={SPLIT_MIN}
+            aria-valuemax={SPLIT_MAX}
+            tabIndex={0}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              setDragging(true);
+            }}
+            onDoubleClick={() => commitSplit(SPLIT_DEFAULT)}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') commitSplit(split - 2);
+              else if (event.key === 'ArrowRight') commitSplit(split + 2);
+              else return;
+              event.preventDefault();
+            }}
+            className="group sticky top-16 hidden h-[calc(100vh-4rem)] cursor-col-resize touch-none items-center justify-center self-start focus:outline-none md:flex"
+            title="Drag to resize · double-click to reset"
+          >
+            <span
+              className={`h-16 w-1.5 rounded-full transition-colors ${
+                dragging ? 'bg-blue-600' : 'bg-gray-300 group-hover:bg-gray-400 group-focus:bg-blue-600'
+              }`}
+            />
+          </div>
         )}
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] gap-6">
-          <div>
-            {loading && (
-              <>
-                <div className="mb-4">
-                  <p className="text-gray-600">Loading camps...</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <CampCardSkeleton key={`skeleton-${idx}`} />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <p className="text-red-800 font-medium">Unable to load camps</p>
-                    <p className="text-red-700 text-sm mt-1">{error}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!loading && !error && (
-              <>
-                <div className="mb-4">
-                  <p className="text-gray-600">
-                    {camps.length === 0
-                      ? 'No camps found. Try adjusting your filters.'
-                      : `Found ${camps.length} camp${camps.length === 1 ? '' : 's'}`}
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-5">
-                  {camps.map((camp) => (
-                    <CampCard key={camp.id} camp={camp} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="xl:sticky xl:top-24 h-fit">
-            <CampsMap camps={camps} />
-          </div>
-        </div>
+        {isDesktop && (
+          <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] self-start py-6 md:block">
+            <div className="h-full">
+              <MapPanel
+                markers={markers}
+                center={zipCenter}
+                radiusMiles={pill.radius}
+                caption={mapCaption}
+                highlightedId={hoveredCampId}
+                selectedId={selectedCampId}
+                onSelect={setSelectedCampId}
+              />
+            </div>
+          </aside>
+        )}
       </div>
+
+      {/* Mobile: list-first, with a floating toggle into a full-screen map. */}
+      {!isDesktop && (
+        <>
+          {mobileMapOpen && (
+            <div className="fixed inset-x-0 bottom-0 top-16 z-40">
+              <MapPanel
+                markers={markers}
+                center={zipCenter}
+                radiusMiles={pill.radius}
+                caption={mapCaption}
+                highlightedId={hoveredCampId}
+                selectedId={selectedCampId}
+                onSelect={setSelectedCampId}
+              />
+            </div>
+          )}
+
+          <button
+            onClick={() => setMobileMapOpen((open) => !open)}
+            className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-gray-800"
+          >
+            {mobileMapOpen ? (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                List
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                  />
+                </svg>
+                Map
+              </>
+            )}
+          </button>
+        </>
+      )}
     </main>
   );
 }
 
-export default function Page() {
+function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <Suspense fallback={null}>
-      <Home />
-    </Suspense>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white">
+      {label}
+      <button type="button" onClick={onRemove} className="text-white/70 hover:text-white" aria-label={`Remove ${label}`}>
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </span>
   );
 }
