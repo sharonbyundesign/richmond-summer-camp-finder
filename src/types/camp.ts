@@ -32,6 +32,11 @@ export interface Camp {
   location?: string;
   description?: string;
   website_url?: string;
+  /** Hosted in Supabase Storage. Preferred over scraping the camp's website. */
+  image_url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  day_type?: string | null;
   zipcode_id?: number;
   zipcode?: CampZipcode | null;
   camp_sessions?: CampSession[];

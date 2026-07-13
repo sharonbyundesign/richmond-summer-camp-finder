@@ -237,7 +237,7 @@ export default function VersionB() {
     return camps
       .filter((camp) => campMatchesAges(camp, pill.ages) && campMatchesWeeks(camp, selectedWeeks))
       .map((camp) => {
-        const coords = campCoord(camp.id);
+        const coords = campCoord(camp);
         const distance = coords && zipCenter ? haversineMiles(zipCenter, coords) : null;
         return { camp, coords, distance };
       });

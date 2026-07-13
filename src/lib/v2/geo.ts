@@ -14,7 +14,6 @@ const ZIPS = zipTable as Record<string, LatLng>;
 const CAMP_COORDS = campCoordTable as Record<string, { lat: number; lng: number; address: string }>;
 
 /**
- * Coordinates are precomputed by scripts/geocode-camps.mjs and committed to src/data.
  * Nothing here touches the network: geocoding at runtime rate-limited badly and left
  * pins trickling in for minutes on a cold cache.
  */
@@ -22,8 +21,17 @@ export function lookupZip(zip: string): LatLng | null {
   return ZIPS[zip] ?? null;
 }
 
-export function campCoord(campId: string): LatLng | null {
-  const entry = CAMP_COORDS[campId];
+/**
+ * The camps table now carries lat/lng directly, which covers more camps and is more
+ * authoritative than our offline pass. src/data/camp-coords.json remains as a fallback
+ * for rows the database hasn't filled in yet.
+ */
+export function campCoord(camp: Camp): LatLng | null {
+  if (typeof camp.latitude === 'number' && typeof camp.longitude === 'number') {
+    return { lat: camp.latitude, lng: camp.longitude };
+  }
+
+  const entry = CAMP_COORDS[camp.id];
   return entry ? { lat: entry.lat, lng: entry.lng } : null;
 }
 
@@ -43,7 +51,7 @@ export function haversineMiles(a: LatLng, b: LatLng): number {
 /** Camps we could place. Camps with a vague address ("Multiple Richmond locations") are absent by design. */
 export function buildMarkers(camps: Camp[]): CampMarker[] {
   return camps.flatMap((camp) => {
-    const coords = campCoord(camp.id);
+    const coords = campCoord(camp);
     if (!coords) return [];
 
     return [

@@ -15,6 +15,7 @@ interface CampCardProps {
     location?: string;
     description?: string;
     website_url?: string;
+    image_url?: string | null;
     zipcode_id?: number;
     camp_sessions?: Array<{
       id?: string;
@@ -73,6 +74,13 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     };
 
     const fetchImages = async () => {
+      // Supabase now hosts a real photo for most camps. Only fall back to scraping the
+      // camp's own website for the rows that don't have one yet.
+      if (camp.image_url) {
+        setImages([camp.image_url]);
+        return;
+      }
+
       if (!camp.website_url) {
         setImages([]);
         return;
@@ -102,7 +110,7 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     return () => {
       cancelled = true;
     };
-  }, [camp.id, camp.website_url]);
+  }, [camp.id, camp.website_url, camp.image_url]);
 
   const currentImage = images[imageIndex];
   const hasCarousel = images.length > 1;
