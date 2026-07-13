@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RADIUS_OPTIONS, type PillState } from '@/lib/v2/usePillState';
 import { groupWeeksByMonth, type WeekOption } from '@/lib/v2/weeks';
+import posthog from 'posthog-js';
 
 const SELECTABLE_AGES = Array.from({ length: 17 }, (_, i) => i + 2); // 2–18
 
@@ -39,17 +40,21 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
   }, [open]);
 
   const toggleAge = (age: number) => {
-    const ages = state.ages.includes(age)
-      ? state.ages.filter((value) => value !== age)
-      : [...state.ages, age].sort((a, b) => a - b);
+    const adding = !state.ages.includes(age);
+    const ages = adding
+      ? [...state.ages, age].sort((a, b) => a - b)
+      : state.ages.filter((value) => value !== age);
     onChange({ ...state, ages });
+    posthog.capture('age_filter_changed', { age, action: adding ? 'added' : 'removed', total_ages: ages.length });
   };
 
   const toggleWeek = (key: string) => {
-    const weeks = state.weeks.includes(key)
-      ? state.weeks.filter((value) => value !== key)
-      : [...state.weeks, key];
+    const adding = !state.weeks.includes(key);
+    const weeks = adding
+      ? [...state.weeks, key]
+      : state.weeks.filter((value) => value !== key);
     onChange({ ...state, weeks });
+    posthog.capture('week_filter_changed', { week_key: key, action: adding ? 'added' : 'removed', total_weeks: weeks.length });
   };
 
   const selectedWeekLabels = weekOptions
@@ -240,9 +245,11 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
                 inputMode="numeric"
                 placeholder="23220"
                 value={state.zip}
-                onChange={(event) =>
-                  onChange({ ...state, zip: event.target.value.replace(/\D/g, '').slice(0, 5) })
-                }
+                onChange={(event) => {
+                  const zip = event.target.value.replace(/\D/g, '').slice(0, 5);
+                  onChange({ ...state, zip });
+                  if (zip.length === 5) posthog.capture('zip_filter_applied', { radius_miles: state.radius });
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>

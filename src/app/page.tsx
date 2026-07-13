@@ -18,6 +18,7 @@ import {
   type Filters,
 } from '@/lib/campFilters';
 import type { Camp } from '@/types/camp';
+import posthog from 'posthog-js';
 
 const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
@@ -308,6 +309,12 @@ export default function Home() {
   const hasPillSelections = pill.ages.length > 0 || pill.weeks.length > 0 || pill.zip.length > 0;
 
   const clearAll = () => {
+    posthog.capture('filters_cleared', {
+      had_ages: pill.ages.length > 0,
+      had_weeks: pill.weeks.length > 0,
+      had_zip: pill.zip.length > 0,
+      had_modal_filters: modalFilterCount > 0,
+    });
     setPill(EMPTY_PILL);
     setFilters(emptyFilters());
     setSortOverride(null);
@@ -384,7 +391,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setFiltersOpen(true)}
+            onClick={() => { setFiltersOpen(true); posthog.capture('more_filters_opened', { active_filter_count: modalFilterCount }); }}
             className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,7 +529,11 @@ export default function Home() {
                   <select
                     id="sort"
                     value={sort}
-                    onChange={(event) => setSortOverride(event.target.value as SortMode)}
+                    onChange={(event) => {
+                      const next = event.target.value as SortMode;
+                      setSortOverride(next);
+                      posthog.capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
+                    }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="distance">Distance</option>
@@ -637,7 +648,11 @@ export default function Home() {
           )}
 
           <button
-            onClick={() => setMobileMapOpen((open) => !open)}
+            onClick={() => {
+              const next = !mobileMapOpen;
+              setMobileMapOpen(next);
+              posthog.capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
+            }}
             className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-gray-800"
           >
             {mobileMapOpen ? (
