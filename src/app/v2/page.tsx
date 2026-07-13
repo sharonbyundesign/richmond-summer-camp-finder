@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import FilterPanel from '@/components/FilterPanel';
@@ -24,6 +24,63 @@ interface Child {
 type SortMode = 'distance' | 'az';
 
 const DESKTOP_QUERY = '(min-width: 768px)';
+
+const SPLIT_KEY = 'scouty:v2:split';
+const SPLIT_DEFAULT = 58;
+const SPLIT_MIN = 35;
+const SPLIT_MAX = 72;
+
+const clampSplit = (value: number) => Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, value));
+
+const CARD_MIN_W = 260;
+const CARD_GAP = 20; // gap-5
+const CARD_MAX_COLS = 4;
+
+/**
+ * Card columns track the list column's real width, not the viewport — the split is
+ * draggable, so a breakpoint can't know how much room the cards actually have.
+ */
+function useCardColumns(ref: React.RefObject<HTMLElement>) {
+  const [columns, setColumns] = useState(1);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      const fits = Math.floor((width + CARD_GAP) / (CARD_MIN_W + CARD_GAP));
+      setColumns(Math.min(CARD_MAX_COLS, Math.max(1, fits)));
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return columns;
+}
+
+/** List/map split as a percentage of the row, persisted like the rest of the session state. */
+function useSplit() {
+  const [split, setSplit] = useState(SPLIT_DEFAULT);
+
+  useEffect(() => {
+    const raw = Number(localStorage.getItem(SPLIT_KEY));
+    if (Number.isFinite(raw) && raw > 0) setSplit(clampSplit(raw));
+  }, []);
+
+  const commit = useCallback((value: number) => {
+    const next = clampSplit(value);
+    setSplit(next);
+    try {
+      localStorage.setItem(SPLIT_KEY, String(next));
+    } catch {
+      // Ignore quota / private-mode failures
+    }
+  }, []);
+
+  return { split, setSplit, commit };
+}
 
 /** Drives which single map instance mounts, so we never run two Leaflet maps at once. */
 function useIsDesktop() {
@@ -67,6 +124,19 @@ export default function VersionB() {
   const [sortOverride, setSortOverride] = useState<SortMode | null>(null);
   const [hoveredCampId, setHoveredCampId] = useState<string | null>(null);
   const [selectedCampId, setSelectedCampId] = useState<string | null>(null);
+
+  const { split, setSplit, commit: commitSplit } = useSplit();
+  const [dragging, setDragging] = useState(false);
+  const splitRowRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
+  const cardColumns = useCardColumns(listRef);
+  const cardGridStyle = { gridTemplateColumns: `repeat(${cardColumns}, minmax(0, 1fr))` };
+
+  const splitFromClientX = useCallback((clientX: number) => {
+    const rect = splitRowRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return null;
+    return ((clientX - rect.left) / rect.width) * 100;
+  }, []);
 
   const isDesktop = useIsDesktop();
 
@@ -400,13 +470,32 @@ export default function VersionB() {
         </>
       )}
 
-      {/* Two-column shell. The list scrolls with the page; the map column sticks. */}
-      <div className="grid grid-cols-1 gap-6 px-4 sm:px-6 lg:px-8 md:grid-cols-[minmax(0,58fr)_minmax(0,42fr)]">
-        <section className="min-w-0 py-6 pb-24 md:pb-6">
+      {/* Two-column shell. The list scrolls with the page; the map column sticks.
+          On desktop the columns are separated by a draggable handle. */}
+      <div
+        ref={splitRowRef}
+        className={`grid grid-cols-1 px-4 sm:px-6 lg:px-8 ${dragging ? 'select-none' : ''}`}
+        style={
+          isDesktop
+            ? { gridTemplateColumns: `minmax(0,${split}fr) 20px minmax(0,${100 - split}fr)` }
+            : undefined
+        }
+        onPointerMove={(event) => {
+          if (!dragging) return;
+          const next = splitFromClientX(event.clientX);
+          if (next !== null) setSplit(clampSplit(next));
+        }}
+        onPointerUp={() => {
+          if (!dragging) return;
+          setDragging(false);
+          commitSplit(split);
+        }}
+      >
+        <section ref={listRef} className="min-w-0 py-6 pb-24 md:pb-6">
           {loading && (
             <>
               <p className="mb-4 text-gray-600">Loading camps…</p>
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <div className="grid gap-5" style={cardGridStyle}>
                 {Array.from({ length: 6 }).map((_, idx) => (
                   <CampCardSkeleton key={`skeleton-${idx}`} />
                 ))}
@@ -473,7 +562,7 @@ export default function VersionB() {
                 </p>
               )}
 
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <div className="grid gap-5" style={cardGridStyle}>
                 {listed.map(({ camp, distance }) => (
                   <CampCard
                     key={camp.id}
@@ -496,7 +585,7 @@ export default function VersionB() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                  <div className="grid gap-5" style={cardGridStyle}>
                     {unplaceable.map(({ camp }) => (
                       <CampCard key={camp.id} camp={camp} distanceMiles={null} />
                     ))}
@@ -506,6 +595,37 @@ export default function VersionB() {
             </>
           )}
         </section>
+
+        {isDesktop && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize list and map"
+            aria-valuenow={Math.round(split)}
+            aria-valuemin={SPLIT_MIN}
+            aria-valuemax={SPLIT_MAX}
+            tabIndex={0}
+            onPointerDown={(event) => {
+              event.currentTarget.setPointerCapture(event.pointerId);
+              setDragging(true);
+            }}
+            onDoubleClick={() => commitSplit(SPLIT_DEFAULT)}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') commitSplit(split - 2);
+              else if (event.key === 'ArrowRight') commitSplit(split + 2);
+              else return;
+              event.preventDefault();
+            }}
+            className="group sticky top-16 hidden h-[calc(100vh-4rem)] cursor-col-resize touch-none items-center justify-center self-start focus:outline-none md:flex"
+            title="Drag to resize · double-click to reset"
+          >
+            <span
+              className={`h-16 w-1.5 rounded-full transition-colors ${
+                dragging ? 'bg-blue-600' : 'bg-gray-300 group-hover:bg-gray-400 group-focus:bg-blue-600'
+              }`}
+            />
+          </div>
+        )}
 
         {isDesktop && (
           <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] self-start py-6 md:block">
