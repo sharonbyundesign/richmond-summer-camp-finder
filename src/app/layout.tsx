@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Lexend } from "next/font/google";
 import "./globals.css";
-import { PostHogProvider } from "./PostHogProvider";
+import Providers from "./providers";
 
 const lexend = Lexend({
   subsets: ["latin"],
@@ -20,10 +20,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={lexend.className}>
-        <PostHogProvider>{children}</PostHogProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
-
-

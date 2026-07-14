@@ -9,6 +9,8 @@ const STORAGE_KEY = 'scouty:v2:pill';
 
 export interface PillState {
   ages: number[];
+  /** Require every selected age to fit, instead of any one of them. */
+  matchAllAges: boolean;
   weeks: string[];
   zip: string;
   radius: number;
@@ -16,6 +18,7 @@ export interface PillState {
 
 export const EMPTY_PILL: PillState = {
   ages: [],
+  matchAllAges: false,
   weeks: [],
   zip: '',
   radius: DEFAULT_RADIUS,
@@ -29,6 +32,7 @@ function sanitize(raw: unknown): PillState {
     ages: Array.isArray(value.ages)
       ? value.ages.filter((age): age is number => typeof age === 'number' && age >= 0 && age <= 18)
       : [],
+    matchAllAges: value.matchAllAges === true,
     weeks: Array.isArray(value.weeks) ? value.weeks.filter((week): week is string => typeof week === 'string') : [],
     zip: typeof value.zip === 'string' ? value.zip.replace(/\D/g, '').slice(0, 5) : '',
     radius:

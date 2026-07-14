@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { categoryIcon } from '@/lib/interest-categories';
-import posthog from 'posthog-js';
+import { capture } from '@/lib/analytics';
 import {
   Filters,
   SessionType,
@@ -89,7 +89,7 @@ export default function FilterPanel({
   const toggleInterest = (interest: string) => {
     const adding = !filters.interests.includes(interest);
     onChange({ interests: toggle(filters.interests, interest) });
-    posthog.capture('interest_filter_toggled', { interest, action: adding ? 'added' : 'removed' });
+    capture('interest_filter_toggled', { interest, action: adding ? 'added' : 'removed' });
   };
 
   const toggleWeek = (weekStart: string) => {

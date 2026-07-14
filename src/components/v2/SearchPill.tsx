@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RADIUS_OPTIONS, type PillState } from '@/lib/v2/usePillState';
 import { groupWeeksByMonth, type WeekOption } from '@/lib/v2/weeks';
-import posthog from 'posthog-js';
+import { capture } from '@/lib/analytics';
 
 const SELECTABLE_AGES = Array.from({ length: 17 }, (_, i) => i + 2); // 2–18
 
@@ -15,11 +15,26 @@ interface SearchPillProps {
   weekOptions: WeekOption[];
   zipStatus: 'idle' | 'loading' | 'ok' | 'notfound';
   onSearch: () => void;
+  /** Fires only when a segment opens, not when it closes. */
+  onSegmentOpen?: (segment: 'age' | 'weeks' | 'zip') => void;
 }
 
-export default function SearchPill({ state, onChange, weekOptions, zipStatus, onSearch }: SearchPillProps) {
+export default function SearchPill({
+  state,
+  onChange,
+  weekOptions,
+  zipStatus,
+  onSearch,
+  onSegmentOpen,
+}: SearchPillProps) {
   const [open, setOpen] = useState<Segment>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const toggleSegment = (segment: 'age' | 'weeks' | 'zip') => {
+    const next = open === segment ? null : segment;
+    if (next) onSegmentOpen?.(next);
+    setOpen(next);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +60,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
       ? [...state.ages, age].sort((a, b) => a - b)
       : state.ages.filter((value) => value !== age);
     onChange({ ...state, ages });
-    posthog.capture('age_filter_changed', { age, action: adding ? 'added' : 'removed', total_ages: ages.length });
+    capture('age_filter_changed', { age, action: adding ? 'added' : 'removed', total_ages: ages.length });
   };
 
   const toggleWeek = (key: string) => {
@@ -54,7 +69,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
       ? [...state.weeks, key]
       : state.weeks.filter((value) => value !== key);
     onChange({ ...state, weeks });
-    posthog.capture('week_filter_changed', { week_key: key, action: adding ? 'added' : 'removed', total_weeks: weeks.length });
+    capture('week_filter_changed', { week_key: key, action: adding ? 'added' : 'removed', total_weeks: weeks.length });
   };
 
   const selectedWeekLabels = weekOptions
@@ -74,13 +89,15 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex items-stretch rounded-full border border-gray-300 bg-white shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
+      {/* Below sm the three segments stack: side by side at 375px they get ~56px of text
+          each after padding, which truncates "Any week" into nonsense. */}
+      <div className="flex flex-col rounded-2xl border border-gray-300 bg-white shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md sm:flex-row sm:items-stretch sm:rounded-full">
         <Segment
           label="Age"
           value={ageSummary}
           active={open === 'age'}
           filled={state.ages.length > 0}
-          onClick={() => setOpen(open === 'age' ? null : 'age')}
+          onClick={() => toggleSegment('age')}
         />
         <Divider />
         <Segment
@@ -88,7 +105,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
           value={weekSummary}
           active={open === 'weeks'}
           filled={state.weeks.length > 0}
-          onClick={() => setOpen(open === 'weeks' ? null : 'weeks')}
+          onClick={() => toggleSegment('weeks')}
         />
         <Divider />
         <Segment
@@ -96,17 +113,17 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
           value={zipSummary}
           active={open === 'zip'}
           filled={state.zip.length === 5}
-          onClick={() => setOpen(open === 'zip' ? null : 'zip')}
+          onClick={() => toggleSegment('zip')}
         />
 
-        <div className="flex items-center pr-2">
+        <div className="p-3 sm:flex sm:items-center sm:p-0 sm:pr-2">
           <button
             type="button"
             onClick={() => {
               setOpen(null);
               onSearch();
             }}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-11 sm:gap-0"
             aria-label="Search camps"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,6 +134,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
                 d="M21 21l-4.35-4.35M19 11a8 8 0 11-16 0 8 8 0 0116 0z"
               />
             </svg>
+            <span className="sm:hidden">Search camps</span>
           </button>
         </div>
       </div>
@@ -148,6 +166,25 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
             </div>
           ) : (
             <p className="mb-4 text-sm text-gray-500">No ages selected — showing camps for all ages.</p>
+          )}
+
+          {/* Only meaningful with two or more kids. Adding a second age normally WIDENS
+              the results (any age fits); this narrows it to camps that serve every kid. */}
+          {state.ages.length > 1 && (
+            <label className="mb-4 flex cursor-pointer items-start gap-2 rounded-lg bg-gray-50 p-3">
+              <input
+                type="checkbox"
+                checked={state.matchAllAges}
+                onChange={(event) => onChange({ ...state, matchAllAges: event.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                <span className="font-medium">Only camps that fit all {state.ages.length} kids</span>
+                <span className="mt-0.5 block text-xs text-gray-500">
+                  Off: camps for {state.ages.join(' or ')}. On: camps for {state.ages.join(' and ')}.
+                </span>
+              </span>
+            </label>
           )}
 
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Add age</p>
@@ -248,7 +285,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
                 onChange={(event) => {
                   const zip = event.target.value.replace(/\D/g, '').slice(0, 5);
                   onChange({ ...state, zip });
-                  if (zip.length === 5) posthog.capture('zip_filter_applied', { radius_miles: state.radius });
+                  if (zip.length === 5) capture('zip_filter_applied', { radius_miles: state.radius });
                 }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
@@ -287,7 +324,8 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
 }
 
 function Divider() {
-  return <div className="my-2 w-px shrink-0 bg-gray-200" />;
+  // Horizontal rule when stacked, vertical hairline when the pill is a row.
+  return <div className="mx-5 h-px shrink-0 bg-gray-200 sm:mx-0 sm:my-2 sm:h-auto sm:w-px" />;
 }
 
 function Popover({ children }: { children: React.ReactNode }) {
@@ -315,7 +353,7 @@ function Segment({
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-w-0 flex-1 flex-col items-start rounded-full px-5 py-2.5 text-left transition-colors ${
+      className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-start justify-center rounded-2xl px-5 py-2.5 text-left transition-colors sm:min-h-0 sm:rounded-full ${
         active ? 'bg-gray-100' : 'hover:bg-gray-50'
       }`}
     >

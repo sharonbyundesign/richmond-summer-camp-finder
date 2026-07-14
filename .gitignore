@@ -44,3 +44,6 @@ next-env.d.ts
 camp_sessions-backup-*.json
 .claude/
 .env.local
+
+# Environment files belong in Vercel, not the repo
+.env.production
