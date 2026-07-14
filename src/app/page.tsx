@@ -596,6 +596,10 @@ export default function Home() {
                 </p>
               )}
 
+              <p className="mb-4 text-xs text-gray-400">
+                Camp details may change — always confirm dates and prices with the camp.
+              </p>
+
               <div className="grid gap-5" style={cardGridStyle}>
                 {listed.map(({ camp, distance }) => (
                   <CampCard
