@@ -97,7 +97,7 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   'd65f5f76-fcc2-43db-bf8e-1603e57e4040': 'photo-1655842556539-db2d2099ded1', // Core Kids Academy
   'f48735d4-2a32-4233-84ff-3fce19135f3c': 'photo-1613950190144-4f2a84c75e8c', // Cultural Arts Center at Glen Allen
   '2dda34c7-aaac-4dd7-ae8d-efcd2da728f9': 'photo-1490383559880-5003a7baa963', // Discovery Center Stony Point
-  '9eb0fc7c-4096-4591-b947-c4743a5ac663': 'photo-1607211851821-8be3cd6146f0', // Doodle Dynamo Art Camp
+  '9eb0fc7c-4096-4591-b947-c4743a5ac663': 'photo-1572265223084-9612f11e7990', // Doodle Dynamo Art Camp
   '000b00e9-2b1d-4b59-b00b-a1f66a73bd0d': 'photo-1602957417690-53488d19faa4', // First Tee Greater Richmond
   '2cb42ecb-a7a2-40b1-8b1f-32a37f691d54': 'flagged/photo-1567116681178-c326fa4e2c8b', // Greenspring Academy of Music Summer Institutes
   '7eb42b3b-bf37-4c28-8b9e-5e719660f804': 'photo-1678027783638-345d5041b529', // GRSM Summer Music Camps
