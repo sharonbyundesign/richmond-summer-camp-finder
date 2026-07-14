@@ -37,7 +37,7 @@ export default function DisclaimerPage() {
 
       <p>
         <strong className="font-semibold text-gray-900">Corrections.</strong> If you represent a camp and
-        would like your listing updated or removed, contact us at sharonbyun.design@gmail or
+        would like your listing updated or removed, contact us at sharonbyun.design@gmail.com or
         cherin0115@gmail.com and we&rsquo;ll respond promptly.
       </p>
     </LegalPage>
