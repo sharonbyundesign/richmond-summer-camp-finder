@@ -18,7 +18,9 @@ import {
   type Filters,
 } from '@/lib/campFilters';
 import type { Camp } from '@/types/camp';
-import posthog from 'posthog-js';
+import RecommendedSection from '@/components/v2/RecommendedSection';
+import { capture, REC_FLAG } from '@/lib/analytics';
+import { useFeatureFlag } from '@/lib/useFeatureFlag';
 
 const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
@@ -229,7 +231,10 @@ export default function Home() {
   /** Server-filtered camps, narrowed by age + weeks, then decorated with distance. */
   const decorated = useMemo(() => {
     return camps
-      .filter((camp) => campMatchesAges(camp, pill.ages) && campMatchesWeeks(camp, selectedWeeks))
+      .filter(
+        (camp) =>
+          campMatchesAges(camp, pill.ages, pill.matchAllAges) && campMatchesWeeks(camp, selectedWeeks)
+      )
       .map((camp) => {
         const coords = campCoord(camp);
         const distance = coords && zipCenter ? haversineMiles(zipCenter, coords) : null;
@@ -264,6 +269,21 @@ export default function Home() {
    * list but kept on the map, and camps we could never place are shown separately rather
    * than silently dropped.
    */
+  /**
+   * Recommended section gating.
+   *
+   * Assignment comes only from the PostHog `rec-enabled` flag (50/50, sticky per
+   * visitor). There is deliberately no URL-parameter override: this launches into a
+   * Facebook group, and a `?variant=` link pasted there would hand everyone who
+   * clicked it the same bucket and collapse the split.
+   *
+   * The age-or-zip condition is what makes recommendations read as contextual rather
+   * than random — a parent who has told us nothing gets nothing.
+   */
+  const recFlagOn = useFeatureFlag(REC_FLAG);
+  const hasRecContext = pill.ages.length > 0 || pill.zip.length === 5;
+  const showRecommended = recFlagOn && hasRecContext;
+
   const { listed, unplaceable, outOfRadius } = useMemo(() => {
     if (!radiusActive) {
       return { listed: sortCamps(decorated), unplaceable: [], outOfRadius: [] };
@@ -275,6 +295,22 @@ export default function Home() {
       outOfRadius: decorated.filter((d) => d.distance !== null && d.distance > pill.radius),
     };
   }, [decorated, radiusActive, pill.radius, sortCamps]);
+
+  /** How many of the shown camps serve every selected age, not just one of them. */
+  const fitsAllCount = useMemo(
+    () =>
+      pill.ages.length > 1
+        ? listed.filter(({ camp }) => campMatchesAges(camp, pill.ages, true)).length
+        : listed.length,
+    [listed, pill.ages]
+  );
+
+  /** Distances for the recommended cards, so they read the same as the rest of the list. */
+  const distanceById = useMemo(() => {
+    const map = new Map<string, number | null>();
+    decorated.forEach(({ camp, distance }) => map.set(camp.id, radiusActive ? distance : null));
+    return map;
+  }, [decorated, radiusActive]);
 
   const markers: MapMarker[] = useMemo(() => {
     const toMarker = (
@@ -309,7 +345,7 @@ export default function Home() {
   const hasPillSelections = pill.ages.length > 0 || pill.weeks.length > 0 || pill.zip.length > 0;
 
   const clearAll = () => {
-    posthog.capture('filters_cleared', {
+    capture('filters_cleared', {
       had_ages: pill.ages.length > 0,
       had_weeks: pill.weeks.length > 0,
       had_zip: pill.zip.length > 0,
@@ -391,7 +427,7 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => { setFiltersOpen(true); posthog.capture('more_filters_opened', { active_filter_count: modalFilterCount }); }}
+            onClick={() => { setFiltersOpen(true); capture('more_filters_opened', { active_filter_count: modalFilterCount }); }}
             className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -509,6 +545,8 @@ export default function Home() {
 
           {!loading && !error && (
             <>
+              {showRecommended && <RecommendedSection camps={camps} distances={distanceById} />}
+
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-gray-600">
                   {listed.length === 0
@@ -518,6 +556,16 @@ export default function Home() {
                     <span className="text-gray-500">
                       {' '}
                       · {outOfRadius.length} outside {pill.radius} mi
+                    </span>
+                  )}
+
+                  {/* With 2+ ages the default is a union, so the count grows as kids are
+                      added. Spelling out how many fit everyone keeps that from reading
+                      as a bug. */}
+                  {pill.ages.length > 1 && !pill.matchAllAges && listed.length > 0 && (
+                    <span className="text-gray-500">
+                      {' '}
+                      · {fitsAllCount} fit all {pill.ages.length} kids
                     </span>
                   )}
                 </p>
@@ -532,7 +580,7 @@ export default function Home() {
                     onChange={(event) => {
                       const next = event.target.value as SortMode;
                       setSortOverride(next);
-                      posthog.capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
+                      capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
                     }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
@@ -655,7 +703,7 @@ export default function Home() {
             onClick={() => {
               const next = !mobileMapOpen;
               setMobileMapOpen(next);
-              posthog.capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
+              capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
             }}
             className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-gray-800"
           >

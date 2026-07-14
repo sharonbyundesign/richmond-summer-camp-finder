@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
-import posthog from 'posthog-js';
+import GoogleReviewsLink from '@/components/GoogleReviewsLink';
+import { capture } from '@/lib/analytics';
 
 interface CampSession {
   id?: string;
@@ -35,6 +36,8 @@ interface Camp {
   description?: string;
   website_url?: string;
   image_url?: string;
+  /** Not in the camps table yet; the reviews link falls back to a Maps search until it is. */
+  place_id?: string | null;
   zipcode_id?: number;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
@@ -260,17 +263,22 @@ export default function CampDetailPage() {
                 ) : null;
               })()}
 
-              {camp.website_url && (
-                <a
-                  href={camp.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => posthog.capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
-                  className="inline-block self-start mt-auto px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Visit Website
-                </a>
-              )}
+              <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3">
+                {camp.website_url && (
+                  <a
+                    href={camp.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
+                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Visit Website
+                  </a>
+                )}
+
+                {/* Secondary by design — it must not compete with the registration CTA. */}
+                <GoogleReviewsLink camp={camp} />
+              </div>
             </div>
           </div>
         </div>
@@ -298,7 +306,7 @@ export default function CampDetailPage() {
                   if (isSaved) {
                     newSavedSessions = savedSessions.filter((id: string) => id !== session.id);
                     setSavedSessionIds(new Set(newSavedSessions));
-                    posthog.capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+                    capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
 
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'DELETE' });
@@ -308,7 +316,7 @@ export default function CampDetailPage() {
                   } else {
                     newSavedSessions = [...savedSessions, session.id];
                     setSavedSessionIds(new Set(newSavedSessions));
-                    posthog.capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+                    capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
 
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'POST' });

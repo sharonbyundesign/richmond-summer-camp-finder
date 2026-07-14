@@ -1,4 +1,4 @@
-import type { Camp } from '@/types/camp';
+import type { Camp, CampSession } from '@/types/camp';
 
 export interface WeekOption {
   /** Monday of the week, as YYYY-MM-DD. Stable id used in state + localStorage. */
@@ -138,15 +138,24 @@ export function campMatchesWeeks(camp: Camp, selected: WeekOption[]): boolean {
   });
 }
 
-/** True when any session's age band contains any selected age. */
-export function campMatchesAges(camp: Camp, ages: number[]): boolean {
+const coversAge = (session: CampSession, age: number) =>
+  (session.min_age ?? 0) <= age && (session.max_age ?? 18) >= age;
+
+/**
+ * Age matching.
+ *
+ * Default is OR: a camp matches if any selected age fits. Adding a second kid therefore
+ * widens the result set — correct, but counter-intuitive, which is why `matchAll` exists.
+ *
+ * With `matchAll`, every selected age must be served, though not necessarily by the same
+ * session — a camp with a 5-8 session and a 9-12 session does fit both a 6- and a 10-year-old.
+ */
+export function campMatchesAges(camp: Camp, ages: number[], matchAll = false): boolean {
   if (ages.length === 0) return true;
 
   const sessions = camp.camp_sessions || [];
 
-  return sessions.some((session) => {
-    const min = session.min_age ?? 0;
-    const max = session.max_age ?? 18;
-    return ages.some((age) => min <= age && max >= age);
-  });
+  return matchAll
+    ? ages.every((age) => sessions.some((session) => coversAge(session, age)))
+    : sessions.some((session) => ages.some((age) => coversAge(session, age)));
 }

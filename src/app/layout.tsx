@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Lexend } from "next/font/google";
 import "./globals.css";
-import { PostHogProvider } from "./PostHogProvider";
+import Providers from "./providers";
 import Footer from "@/components/Footer";
 import ConsentBanner from "@/components/ConsentBanner";
 
@@ -22,14 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={lexend.className}>
-        <PostHogProvider>
+        <Providers>
           {children}
           <Footer />
           <ConsentBanner />
-        </PostHogProvider>
+        </Providers>
       </body>
     </html>
   );
 }
-
-
