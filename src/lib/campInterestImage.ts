@@ -75,9 +75,76 @@ const MULTI_PHOTOS = [
   'photo-1563902315161-7d8184684f79',
 ];
 
+// Hand-picked photo overrides, keyed by camp id. These win over the interest
+// pools below — Sharon chose a specific Unsplash photo for each of these camps.
+// (Two-location brands share one photo: both Bella Ballerina locations, both
+// True Black Belt locations, both School of Rock locations.)
+const PHOTO_BY_CAMP_ID: Record<string, string> = {
+  '370cf10c-6876-403e-916f-01bfefcb6cb2': 'photo-1498747946579-bde604cb8f44', // ACAC Midlothian
+  '060bfd6d-0cba-4616-989d-d6eae1454512': 'photo-1621004612697-2b177e183326', // Bella Ballerina, Chesterfield
+  '8904e113-9f8c-4515-a3d9-298fc57e0473': 'photo-1621004612697-2b177e183326', // Bella Ballerina, Short Pump
+  '91de4858-4f00-45ef-84fd-408a1020215c': 'photo-1519076976365-9c64dbd98317', // Bach to Rock Midlothian
+  '4fed686d-59c3-4c3e-9664-bdfe1363cc23': 'photo-1631106256072-54c89defe828', // Bricks 4 Kidz Richmond
+  '0d9e8c41-1d2a-4d89-b951-06c1d7b5e327': 'photo-1594913495702-0872744c6968', // Brilliant Summer
+  '1943d3dc-d1c3-438b-98d1-6e2e9cb029ab': 'photo-1464692805480-a69dfaafdb0d', // Camp Baker at SOAR 365
+  'bd6ddca2-1de8-47fe-9ef4-d5b99b28c498': 'photo-1587786255280-7836bf020cd6', // Camp Sensory House
+  'cfec49c4-58f5-4a79-94fa-e9e8873bc104': 'photo-1508344928928-7165b67de128', // Camp Tuckahoe
+  '9cb16667-0680-43fa-965e-c3325420ee2b': 'photo-1506845347893-bc5faede1eec', // Civil War Adventure Camp
+  '15844129-6b4b-49fc-829c-a6f201c83ef1': 'photo-1617117206620-b01f2919ff86', // Collegiate School
+  '84c3bd65-ee40-43be-9cc6-3210eafd795e': 'photo-1738658024539-a8d1527fa8e8', // Comedy Sportz
+  'd65f5f76-fcc2-43db-bf8e-1603e57e4040': 'photo-1655842556539-db2d2099ded1', // Core Kids Academy
+  'f48735d4-2a32-4233-84ff-3fce19135f3c': 'photo-1613950190144-4f2a84c75e8c', // Cultural Arts Center at Glen Allen
+  '2dda34c7-aaac-4dd7-ae8d-efcd2da728f9': 'photo-1490383559880-5003a7baa963', // Discovery Center Stony Point
+  '000b00e9-2b1d-4b59-b00b-a1f66a73bd0d': 'photo-1602957417690-53488d19faa4', // First Tee Greater Richmond
+  '3c7ab356-fbb0-4ac6-9e47-3c279f983a86': 'photo-1605202764282-89f3fbce5c16', // James River Association
+  '45d17c65-a8f5-49cc-ae9c-6172c704ee01': 'photo-1490750967868-88aa4486c946', // Lewis Ginter Botanical Garden
+  '6a34e1d8-c5bc-4ce3-82f6-35cf2c8d8079': 'photo-1653015503992-347de54a8125', // M14 Hoops
+  'b0282852-a5b6-4202-9e74-c0fd6cc4c41f': 'photo-1656653121526-a1458317b790', // Master Cho's Tae Kwon Do
+  '4321d3bd-2b8d-44bd-8f0b-94d71affca82': 'photo-1597117903702-fb2788ddf816', // Maymont Summer Discovery
+  '4c8cb2f1-fc26-4d0b-8610-dde4e1c714e6': 'photo-1774624345025-f73936b94dbf', // Melody Magic Music
+  'dae06ca2-aa27-420f-ae5f-b5a3119b52a3': 'photo-1565687981296-535f09db714e', // Minecraft, Roblox, Game Design
+  'a78be5cc-be7e-4100-8e12-d73d8746abce': 'photo-1711048421235-3fcb9dcf82f7', // Mosley Music Camps
+  'f918c545-8ddc-42a0-80ec-e5991911b641': 'photo-1530560643359-6d2fead989b3', // My Taekwondo Summer Camp
+  'aab87506-1ef6-4e08-9d18-9884caf9769e': 'photo-1587683437362-da7775ffc532', // Nike Tennis Camp at VCU
+  '8b51275e-df82-4241-a196-6b3323c0e88c': 'photo-1552474705-dd8183e00901', // Pactamere Farm
+  '92916235-6426-4272-92f3-e6242a87c399': 'photo-1659666287295-7da26c3f80d4', // Passages Adventure Camp
+  '41d1cede-0475-476b-9342-68a54b87fff2': 'photo-1730127143739-9dc06877bb7f', // Pipeline Adventure Camp
+  'c23b2296-55fb-46c3-ac79-ad149d46be25': 'photo-1489710437720-ebb67ec84dd2', // RAS Camp Adventure Weeks
+  '64c3fe49-80cb-444d-aa0c-fc63acc8541a': 'photo-1524594152303-9fd13543fe6e', // Releve RVA
+  'f5cd9f4c-d587-49a7-92e0-f086e813349a': 'photo-1505619656705-59ebc350b547', // Richmond Fencing Club
+  '8843bb79-b66d-4720-b949-eb1ea2b3aa81': 'photo-1601979031925-424e53b6caaa', // Richmond SPCA Critter Camp
+  '163b966f-22bb-4096-82a3-7051156474fb': 'photo-1592656094267-764a45160876', // Richmond Volleyball Club
+  '55327b36-491c-454f-ad1d-f2c598cfbac2': 'photo-1555597673-b21d5c935865', // RISE Martial Arts
+  '57bd1cd2-cf11-413b-a05d-ce1c54e7cda6': 'photo-1564325724739-bae0bd08762c', // RITS Summer Camp
+  '2ce1c62e-7dea-4fc3-ab56-82e334dfdda1': 'photo-1707991115462-b0165a7ec227', // Riverside Outfitters
+  '7a684f06-4d3a-4e84-a434-8849ed5245a6': 'photo-1546519638-68e109498ffc', // RockIt Sports
+  '14c2b30a-f6ab-4c84-b51d-f7d69420e259': 'photo-1588472235276-7638965471e2', // RVA Paddlesports
+  'c1855ea1-26c0-4ae2-8004-00976df8d2a9': 'photo-1708961465136-e24550f3acd5', // School of Rock Midlothian
+  '73b82ad4-4689-47b4-8362-af7ec161661f': 'photo-1708961465136-e24550f3acd5', // School of Rock Short Pump
+  'cd6dcce9-e1e9-46a6-9771-93c32cf07005': 'photo-1579952363873-27f3bade9f55', // SCOR Summer Camp
+  'd4042189-b6fb-47f8-a4bd-8b72b7099583': 'photo-1682953390639-381112a2c4f0', // SkateNation Plus
+  'baa1a3cb-38c1-4d77-8c6f-6191bd35aeab': 'photo-1566140967404-b8b3932483f5', // Snapology of Glen Allen
+  '5d0c9777-3fb6-436c-acdc-52aa44c0a123': 'photo-1612078311896-bc64c28a6749', // SPARC Summer
+  'cae877fe-fdca-4546-822a-7493c56c5f31': 'photo-1503454537195-1dcabb73ffb9', // St. Michael's Episcopal School
+  'c4031cda-e541-4642-bf49-d78288d63450': 'photo-1469406396016-013bfae5d83e', // Steward Summer Experience
+  '5456b226-926f-40f6-b22e-55fecc4961c7': 'photo-1527430253228-e93688616381', // Sylvan Edge Camps
+  '03916606-8fbc-4883-b8eb-c33b76362471': 'photo-1634128221889-82ed6efebfc3', // The Language Hub
+  '2fd8080a-967d-4470-b869-003bf54d8e7e': 'photo-1656653121475-e33829581294', // True Black Belt, Ashland
+  'becfd372-9b27-4e8c-9ec7-07829ec41571': 'photo-1656653121475-e33829581294', // True Black Belt, Glen Allen
+  '2d72a18d-7729-46ae-b62a-4095ddb206b9': 'photo-1655842556563-2c28adb3fcc5', // Twist Gymnastics
+  '9c1579df-7631-4c9a-ad84-3c740d7953ae': 'photo-1574744918163-6cef6f4a31b0', // University of Richmond Swim
+  '1b282a9f-a13d-4daf-96e7-0cb4c8d51cb0': 'photo-1524621880920-5a6a9a3b239e', // Unscripted Fun
+  'cb9e9ae9-5c24-411f-a6d1-12e34d6a02ee': 'photo-1613002864759-130aad1f3e99', // Virginia Outside
+  '16dcf5f5-ad71-4934-8645-2075134426dc': 'photo-1459908676235-d5f02a50184b', // VMFA Summer Camps
+};
+
 // Landscape crop that suits the card (h-44), map popup (h-24) and detail hero
 // (aspect-video), all of which object-cover.
 const UNSPLASH_PARAMS = 'w=800&h=450&fit=crop&crop=faces,center&q=75&auto=format';
+
+function photoUrl(slug: string): string {
+  return `https://images.unsplash.com/${slug}?${UNSPLASH_PARAMS}`;
+}
 
 // Small deterministic string hash so a given camp always maps to the same photo.
 function hash(input: string): number {
@@ -89,14 +156,19 @@ function hash(input: string): number {
 }
 
 /**
- * Public URL of the interest photo for a camp, or null when the camp has no
- * recognised interest (callers fall back to their placeholder). `campId` only
- * seeds which photo in the pool is used, so it stays stable per camp.
+ * Public URL of the photo for a camp. A hand-picked override wins if one exists
+ * for the camp id; otherwise a photo is chosen from the camp's interest pool.
+ * Returns null only when the camp has neither an override nor a recognised
+ * interest (callers fall back to their placeholder). `campId` also seeds which
+ * pool photo is used, so it stays stable per camp.
  */
 export function campInterestImageUrl(
   campId: string,
   interests?: RawInterest[],
 ): string | null {
+  const override = PHOTO_BY_CAMP_ID[campId];
+  if (override) return photoUrl(override);
+
   const raws = (interests || []).map((i) =>
     typeof i === 'string' ? i : i?.tag ?? i?.interest_name,
   );
@@ -108,6 +180,5 @@ export function campInterestImageUrl(
       ? MULTI_PHOTOS
       : PHOTOS_BY_CATEGORY[categories[0]] ?? MULTI_PHOTOS;
 
-  const photo = pool[hash(campId) % pool.length];
-  return `https://images.unsplash.com/${photo}?${UNSPLASH_PARAMS}`;
+  return photoUrl(pool[hash(campId) % pool.length]);
 }
