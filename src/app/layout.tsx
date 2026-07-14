@@ -4,6 +4,8 @@ import "./globals.css";
 import Providers from "./providers";
 import BetaBanner from "@/components/BetaBanner";
 import { BETA_BANNER_KEY, BETA_BANNER_DISMISSED_CLASS } from "@/lib/betaBanner";
+import Footer from "@/components/Footer";
+import ConsentBanner from "@/components/ConsentBanner";
 
 const lexend = Lexend({
   subsets: ["latin"],
@@ -68,8 +70,13 @@ export default function RootLayout({
       </head>
       <body className={lexend.className}>
         <Providers>
+          {/* Top-of-page bar, in normal flow above the sticky header. */}
           <BetaBanner />
           {children}
+          <Footer />
+          {/* Fixed to the bottom of the viewport at z-[60] — above everything else,
+              including the beta bar, so consent always wins if anything ever meets it. */}
+          <ConsentBanner />
         </Providers>
       </body>
     </html>
