@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { METERS_PER_MILE, type LatLng } from '@/lib/v2/geo';
+import { campInterestImageUrl } from '@/lib/campInterestImage';
 import type { Camp, CampMarker } from '@/types/camp';
 
 const DEFAULT_CENTER: [number, number] = [37.5407, -77.436];
@@ -142,6 +143,12 @@ function FitView({
 function PopupCard({ camp, distanceMiles }: { camp: Camp; distanceMiles?: number | null }) {
   const map = useMap();
 
+  // Same photo the list card shows: interest pool / hand-picked override, then the
+  // camp's own image_url. Falls back to the placeholder icon if both are absent or 404.
+  const [image, setImage] = useState<string | null>(
+    () => campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url ?? null
+  );
+
   const sessions = camp.camp_sessions || [];
   const starts = sessions.map((s) => new Date(s.start_date).getTime()).filter((t) => !Number.isNaN(t));
   const ends = sessions.map((s) => new Date(s.end_date).getTime()).filter((t) => !Number.isNaN(t));
@@ -167,16 +174,27 @@ function PopupCard({ camp, distanceMiles }: { camp: Camp; distanceMiles?: number
         className="block overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-md"
       >
         <div className="relative h-24 w-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg className="h-10 w-10 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-          </div>
+          {image ? (
+            // Plain <img>: Leaflet renders the popup outside Next's layout tree, so
+            // next/image's fill sizing doesn't apply cleanly here.
+            <img
+              src={image}
+              alt={`${camp.name} photo`}
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={() => setImage(null)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="h-10 w-10 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+            </div>
+          )}
         </div>
 
         <div className="p-2">
