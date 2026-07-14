@@ -7,6 +7,7 @@ import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { cityFromLocation, ageRange, sessionRange } from '@/lib/campCardFormat';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
+import { campInterestImageUrl } from '@/lib/campInterestImage';
 
 interface CampCardProps {
   /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
@@ -49,16 +50,21 @@ const MAX_TAGS = 2;
 
 export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCardProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [image, setImage] = useState<string | null>(camp.image_url ?? null);
+  // Cards now show a stock photo for the camp's interest; image_url and the
+  // site-scraping fallback below only apply to camps with no recognised interest.
+  const interestImage = campInterestImageUrl(camp.id, camp.camp_interests);
+  const [image, setImage] = useState<string | null>(interestImage ?? camp.image_url ?? null);
 
   useEffect(() => {
     const savedCamps = JSON.parse(localStorage.getItem('savedCamps') || '[]');
     setIsSaved(savedCamps.includes(camp.id));
   }, [camp.id]);
 
-  // Nearly every camp now has an image_url; only fall back to scraping the camp's own
-  // site for the few that don't.
   useEffect(() => {
+    if (interestImage) {
+      setImage(interestImage);
+      return;
+    }
     if (camp.image_url) {
       setImage(camp.image_url);
       return;
@@ -97,7 +103,7 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     return () => {
       cancelled = true;
     };
-  }, [camp.id, camp.website_url, camp.image_url]);
+  }, [camp.id, camp.website_url, camp.image_url, interestImage]);
 
   const handleSaveToggle = async (event: React.MouseEvent) => {
     event.preventDefault();

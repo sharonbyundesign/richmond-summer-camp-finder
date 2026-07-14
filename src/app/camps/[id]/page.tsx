@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
+import { campInterestImageUrl } from '@/lib/campInterestImage';
 import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { feedbackMailto } from '@/lib/contact';
@@ -227,9 +228,9 @@ export default function CampDetailPage() {
           <div className="flex flex-col md:flex-row">
             {/* Camp Image (curated) or placeholder — same landscape ratio as the camp card, left side */}
             <div className="w-full md:w-80 lg:w-96 flex-shrink-0 aspect-video bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
-              {camp.image_url ? (
+              {(campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url) ? (
                 <Image
-                  src={camp.image_url}
+                  src={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url!}
                   alt={`${camp.name} photo`}
                   fill
                   sizes="(max-width: 768px) 100vw, 384px"
