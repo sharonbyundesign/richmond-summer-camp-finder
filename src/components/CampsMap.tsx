@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { campIllustrationUrl } from '@/lib/campIllustration';
+import { campInterestImageUrl } from '@/lib/campInterestImage';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -306,9 +306,9 @@ export default function CampsMap({ camps }: CampsMapProps) {
           className="block bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
         >
           <div className="w-full h-24 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
-            {(campIllustrationUrl(camp.camp_interests) ?? camp.image_url) ? (
+            {(campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url) ? (
               <Image
-                src={campIllustrationUrl(camp.camp_interests) ?? camp.image_url!}
+                src={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url!}
                 alt={`${camp.name} photo`}
                 fill
                 sizes="256px"
