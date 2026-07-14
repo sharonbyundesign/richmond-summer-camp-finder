@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -305,10 +306,12 @@ export default function CampsMap({ camps }: CampsMapProps) {
         >
           <div className="w-full h-24 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
             {camp.image_url ? (
-              <img
+              <Image
                 src={camp.image_url}
                 alt={`${camp.name} photo`}
-                className="absolute inset-0 h-full w-full object-cover"
+                fill
+                sizes="256px"
+                className="object-cover"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">

@@ -256,7 +256,7 @@ export default function Home() {
         const distance = coords && zipCenter ? haversineMiles(zipCenter, coords) : null;
         return { camp, coords, distance };
       });
-  }, [camps, pill.ages, selectedWeeks, zipCenter]);
+  }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter]);
 
   const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'az');
 
