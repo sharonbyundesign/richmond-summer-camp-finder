@@ -398,11 +398,11 @@ export default function Home() {
         className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70"
       >
         <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold leading-tight text-gray-900 sm:text-xl">
+          <div className="flex min-w-0 items-baseline gap-2.5">
+            <h1 className="shrink-0 text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
               Scouty
             </h1>
-            <p className="truncate text-xs leading-tight text-gray-500">
+            <p className="truncate text-sm leading-tight text-gray-500">
               Richmond summer camp finder
             </p>
           </div>
