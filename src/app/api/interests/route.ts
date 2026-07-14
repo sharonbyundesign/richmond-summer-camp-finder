@@ -1,29 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { toCategories } from '@/lib/interest-categories';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Check environment variables first
     const supabase = getSupabaseServerClient();
     if (!supabase) {
       return NextResponse.json(
         {
           error: 'Server configuration error',
           details: 'Supabase credentials are not configured.',
-          interests: []
+          interests: [],
         },
         { status: 500 }
       );
     }
 
-    // Fetch all unique interests from camp_interests table
     const { data, error } = await supabase
       .from('camp_interests')
-      .select('tag, interest_name')
-      .order('interest_name', { ascending: true });
+      .select('tag, interest_name');
 
     if (error) {
       console.error('Supabase error:', error);
@@ -33,35 +31,14 @@ export async function GET() {
       );
     }
 
-    // Extract unique interest names/tags with case-insensitive deduplication
-    const interestsMap = new Map<string, string>(); // lowercase -> original case
-    
-    if (data) {
-      data.forEach((interest: { tag?: string | null; interest_name?: string | null }) => {
-        // Add tag if present
-        if (interest.tag && interest.tag.trim()) {
-          const normalized = interest.tag.trim();
-          const lower = normalized.toLowerCase();
-          // Keep the first occurrence (or prefer capitalized version)
-          if (!interestsMap.has(lower) || (normalized[0] === normalized[0].toUpperCase() && interestsMap.get(lower)?.[0] !== interestsMap.get(lower)?.[0].toUpperCase())) {
-            interestsMap.set(lower, normalized);
-          }
-        }
-        // Add interest_name if present
-        if (interest.interest_name && interest.interest_name.trim()) {
-          const normalized = interest.interest_name.trim();
-          const lower = normalized.toLowerCase();
-          // Keep the first occurrence (or prefer capitalized version)
-          if (!interestsMap.has(lower) || (normalized[0] === normalized[0].toUpperCase() && interestsMap.get(lower)?.[0] !== interestsMap.get(lower)?.[0].toUpperCase())) {
-            interestsMap.set(lower, normalized);
-          }
-        }
-      });
-    }
-
-    // Convert to array and sort
-    const interests = Array.from(interestsMap.values()).sort((a, b) => 
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    // Collapse every raw tag onto the canonical 9-category taxonomy and return
+    // only the categories that are actually present, in fixed display order.
+    const rows = (data ?? []) as Array<{
+      tag?: string | null;
+      interest_name?: string | null;
+    }>;
+    const interests = toCategories(
+      rows.flatMap((row) => [row.tag, row.interest_name])
     );
 
     return NextResponse.json({ interests });
@@ -70,10 +47,9 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'An unexpected error occurred while loading interests.',
-        interests: []
+        interests: [],
       },
       { status: 500 }
     );
   }
 }
-

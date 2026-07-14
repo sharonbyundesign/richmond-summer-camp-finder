@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { categoryIcon, toCategories } from '@/lib/interest-categories';
 import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 
@@ -34,9 +35,9 @@ interface Camp {
   location?: string;
   description?: string;
   website_url?: string;
-  image_url?: string | null;
+  image_url?: string;
+  /** Not in the camps table yet; the reviews link falls back to a Maps search until it is. */
   place_id?: string | null;
-  day_type?: string | null;
   zipcode_id?: number;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
@@ -47,7 +48,6 @@ export default function CampDetailPage() {
   const [camp, setCamp] = useState<Camp | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [imageFailed, setImageFailed] = useState(false);
   const [savedSessionIds, setSavedSessionIds] = useState<Set<string>>(new Set());
 
   // Load saved session IDs
@@ -195,84 +195,90 @@ export default function CampDetailPage() {
 
         {/* Camp Header */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-6">
-          {/* Camp photo, falling back to the gradient placeholder when there is none. */}
-          <div className="w-full h-64 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative overflow-hidden">
-            {camp.image_url && !imageFailed ? (
-              <Image
-                src={camp.image_url}
-                alt={`${camp.name} photo`}
-                fill
-                sizes="(max-width: 1024px) 100vw, 1024px"
-                className="object-cover"
-                priority
-                onError={() => setImageFailed(true)}
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg
-                  className="w-32 h-32 text-white opacity-30"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
-            )}
-          </div>
-
-          {/* Camp Info */}
-          <div className="p-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{camp.name}</h1>
-            
-            {camp.location && (
-              <p className="text-gray-600 mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {camp.location}
-              </p>
-            )}
-
-            {camp.description && (
-              <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
-            )}
-
-            {camp.camp_interests && camp.camp_interests.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {camp.camp_interests.map((interest, idx) => (
-                  <span
-                    key={interest.id || idx}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
+          <div className="flex flex-col md:flex-row">
+            {/* Camp Image (curated) or placeholder — same landscape ratio as the camp card, left side */}
+            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 aspect-video bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
+              {camp.image_url ? (
+                <Image
+                  src={camp.image_url}
+                  alt={`${camp.name} photo`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 384px"
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg
+                    className="w-32 h-32 text-white opacity-70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    {interest.tag || interest.interest_name}
-                  </span>
-                ))}
-              </div>
-            )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              {camp.website_url && (
-                <a
-                  href={camp.website_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    capture('registration_click', { camp_id: camp.id, url: camp.website_url })
-                  }
-                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Visit Website
-                </a>
+            {/* Camp Info — stacked, right side */}
+            <div className="flex-1 p-6 flex flex-col">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">{camp.name}</h1>
+
+              {camp.location && (
+                <p className="text-gray-600 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {camp.location}
+                </p>
               )}
 
-              <GoogleReviewsLink camp={camp} />
+              {camp.description && (
+                <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
+              )}
+
+              {(() => {
+                const categories = toCategories(
+                  (camp.camp_interests || []).map((i) => i.tag || i.interest_name)
+                );
+                return categories.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {categories.map((category) => (
+                      <span
+                        key={category}
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
+                      >
+                        <span aria-hidden="true">{categoryIcon(category)}</span>
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3">
+                {camp.website_url && (
+                  <a
+                    href={camp.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
+                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Visit Website
+                  </a>
+                )}
+
+                {/* Secondary by design — it must not compete with the registration CTA. */}
+                <GoogleReviewsLink camp={camp} />
+              </div>
             </div>
           </div>
         </div>
@@ -300,7 +306,8 @@ export default function CampDetailPage() {
                   if (isSaved) {
                     newSavedSessions = savedSessions.filter((id: string) => id !== session.id);
                     setSavedSessionIds(new Set(newSavedSessions));
-                    
+                    capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'DELETE' });
                     } catch (err) {
@@ -309,7 +316,8 @@ export default function CampDetailPage() {
                   } else {
                     newSavedSessions = [...savedSessions, session.id];
                     setSavedSessionIds(new Set(newSavedSessions));
-                    
+                    capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
                     try {
                       await fetch(`/api/sessions/${session.id}/save`, { method: 'POST' });
                     } catch (err) {

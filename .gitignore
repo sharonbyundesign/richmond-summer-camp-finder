@@ -35,4 +35,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local source images (served from Supabase Storage, not needed in repo)
+/src/images/
 
+
+
+# local db backups
+camp_sessions-backup-*.json
+.claude/
+.env.local
+
+# Environment files belong in Vercel, not the repo
+.env.production

@@ -76,7 +76,14 @@ export default function RecommendedSection({ camps, distances }: RecommendedSect
               capture('rec_card_clicked', { camp_id: camp.id, position: index + 1 })
             }
           >
-            <span className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-amber-400 px-2.5 py-1 text-xs font-bold text-gray-900 shadow-sm">
+            {/* Deliberately not a heart (that's "saved") and not a star (that's the
+                Google reviews link in the footer). A sparkle reads as "we picked this",
+                not as a state the parent toggled. */}
+            <span className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-1 ring-white/40">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2z" />
+                <path d="M18.5 14l.85 2.5 2.5.85-2.5.85-.85 2.5-.85-2.5-2.5-.85 2.5-.85.85-2.5z" opacity="0.75" />
+              </svg>
               Recommended
             </span>
 

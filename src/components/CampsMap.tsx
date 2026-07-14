@@ -12,6 +12,9 @@ type CampMapItem = {
   location?: string;
   description?: string;
   website_url?: string;
+  image_url?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   zipcode?: {
     id?: number;
     zip_code?: string | null;
@@ -109,6 +112,23 @@ export default function CampsMap({ camps }: CampsMapProps) {
 
       const initialMarkers = camps
         .map((camp) => {
+          // 1. Prefer coordinates stored directly on the camp (pre-geocoded).
+          if (
+            typeof camp.latitude === 'number' &&
+            typeof camp.longitude === 'number'
+          ) {
+            return {
+              id: camp.id,
+              name: camp.name,
+              location: camp.location,
+              lat: camp.latitude,
+              lng: camp.longitude,
+              zip: camp.zipcode?.zip_code || undefined,
+              camp,
+            };
+          }
+
+          // 2. Fall back to coordinates from the zipcode relation.
           const lat = camp.zipcode?.latitude;
           const lng = camp.zipcode?.longitude;
           if (typeof lat === 'number' && typeof lng === 'number') {
@@ -123,6 +143,7 @@ export default function CampsMap({ camps }: CampsMapProps) {
             };
           }
 
+          // 3. Fall back to a previously cached live-geocode result.
           const cached = cache[camp.id];
           if (cached) {
             return {
@@ -144,11 +165,14 @@ export default function CampsMap({ camps }: CampsMapProps) {
       }
 
       const pending = camps.filter((camp) => {
+        const hasStoredCoords =
+          typeof camp.latitude === 'number' &&
+          typeof camp.longitude === 'number';
         const hasZipCoords =
           typeof camp.zipcode?.latitude === 'number' &&
           typeof camp.zipcode?.longitude === 'number';
         const hasCache = !!cache[camp.id];
-        return !hasZipCoords && !hasCache && !!camp.location;
+        return !hasStoredCoords && !hasZipCoords && !hasCache && !!camp.location;
       });
 
       if (pending.length === 0) return;
@@ -279,12 +303,20 @@ export default function CampsMap({ camps }: CampsMapProps) {
           href={`/camps/${camp.id}`}
           className="block bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
         >
-          <div className="w-full h-24 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg className="w-10 h-10 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
+          <div className="w-full h-24 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
+            {camp.image_url ? (
+              <img
+                src={camp.image_url}
+                alt={`${camp.name} photo`}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+            )}
           </div>
           <div className="p-2">
             <h4 className="text-sm font-semibold text-gray-900 line-clamp-2">

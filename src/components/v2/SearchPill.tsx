@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { RADIUS_OPTIONS, type PillState } from '@/lib/v2/usePillState';
 import { groupWeeksByMonth, type WeekOption } from '@/lib/v2/weeks';
+import { capture } from '@/lib/analytics';
 
 const SELECTABLE_AGES = Array.from({ length: 17 }, (_, i) => i + 2); // 2–18
 
@@ -54,17 +55,21 @@ export default function SearchPill({
   }, [open]);
 
   const toggleAge = (age: number) => {
-    const ages = state.ages.includes(age)
-      ? state.ages.filter((value) => value !== age)
-      : [...state.ages, age].sort((a, b) => a - b);
+    const adding = !state.ages.includes(age);
+    const ages = adding
+      ? [...state.ages, age].sort((a, b) => a - b)
+      : state.ages.filter((value) => value !== age);
     onChange({ ...state, ages });
+    capture('age_filter_changed', { age, action: adding ? 'added' : 'removed', total_ages: ages.length });
   };
 
   const toggleWeek = (key: string) => {
-    const weeks = state.weeks.includes(key)
-      ? state.weeks.filter((value) => value !== key)
-      : [...state.weeks, key];
+    const adding = !state.weeks.includes(key);
+    const weeks = adding
+      ? [...state.weeks, key]
+      : state.weeks.filter((value) => value !== key);
     onChange({ ...state, weeks });
+    capture('week_filter_changed', { week_key: key, action: adding ? 'added' : 'removed', total_weeks: weeks.length });
   };
 
   const selectedWeekLabels = weekOptions
@@ -163,6 +168,25 @@ export default function SearchPill({
             <p className="mb-4 text-sm text-gray-500">No ages selected — showing camps for all ages.</p>
           )}
 
+          {/* Only meaningful with two or more kids. Adding a second age normally WIDENS
+              the results (any age fits); this narrows it to camps that serve every kid. */}
+          {state.ages.length > 1 && (
+            <label className="mb-4 flex cursor-pointer items-start gap-2 rounded-lg bg-gray-50 p-3">
+              <input
+                type="checkbox"
+                checked={state.matchAllAges}
+                onChange={(event) => onChange({ ...state, matchAllAges: event.target.checked })}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                <span className="font-medium">Only camps that fit all {state.ages.length} kids</span>
+                <span className="mt-0.5 block text-xs text-gray-500">
+                  Off: camps for {state.ages.join(' or ')}. On: camps for {state.ages.join(' and ')}.
+                </span>
+              </span>
+            </label>
+          )}
+
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Add age</p>
           <div className="grid grid-cols-6 gap-2">
             {SELECTABLE_AGES.map((age) => (
@@ -258,9 +282,11 @@ export default function SearchPill({
                 inputMode="numeric"
                 placeholder="23220"
                 value={state.zip}
-                onChange={(event) =>
-                  onChange({ ...state, zip: event.target.value.replace(/\D/g, '').slice(0, 5) })
-                }
+                onChange={(event) => {
+                  const zip = event.target.value.replace(/\D/g, '').slice(0, 5);
+                  onChange({ ...state, zip });
+                  if (zip.length === 5) capture('zip_filter_applied', { radius_miles: state.radius });
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>

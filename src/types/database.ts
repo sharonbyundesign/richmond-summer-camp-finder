@@ -9,6 +9,9 @@ export interface Camp {
   min_age?: number
   max_age?: number
   website_url?: string
+  image_url?: string
+  latitude?: number | null
+  longitude?: number | null
   created_at?: string
   updated_at?: string
 }

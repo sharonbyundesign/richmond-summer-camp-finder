@@ -2,7 +2,14 @@
 
 import posthog from 'posthog-js';
 
-const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+/**
+ * Two names are in play: this branch provisioned NEXT_PUBLIC_POSTHOG_KEY on Vercel, while
+ * the beta was configured with NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN. Accept either, or the
+ * deployment whose env uses the other name initialises PostHog with `undefined` and
+ * silently captures nothing — a failure with no error and no console output.
+ */
+const KEY =
+  process.env.NEXT_PUBLIC_POSTHOG_KEY || process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 /** The 50/50 flag gating the Recommended-for-you section. */
@@ -40,23 +47,33 @@ export function isAnalyticsReady() {
   return started;
 }
 
+/**
+ * Canonical taxonomy. These are the names already flowing into PostHog from the live
+ * beta, so they stay as-is — renaming them would split every funnel into a
+ * before/after series and make the rec comparison unreadable.
+ */
 export type EventName =
-  // Recommended section
+  // New in v2.1 — the recommendation fake door and the Google reviews link-out.
   | 'rec_section_viewed'
   | 'rec_card_clicked'
-  // Google reviews
   | 'google_reviews_link_clicked'
-  // Core funnel — these did not exist before; they are created here so both flag
-  // states can be compared on the same events.
-  | 'card_clicked'
-  | 'registration_click'
+  // Existing funnel.
   | 'camp_saved'
   | 'camp_unsaved'
-  | 'zip_entered'
-  | 'age_added'
-  | 'radius_changed'
+  | 'camp_website_visited'
+  | 'session_saved'
+  | 'session_unsaved'
+  | 'interest_filter_toggled'
+  | 'age_filter_changed'
+  | 'week_filter_changed'
+  | 'zip_filter_applied'
   | 'sort_changed'
-  | 'search_pill_opened'
+  | 'more_filters_opened'
+  | 'filters_cleared'
+  | 'mobile_map_toggled'
+  // Card click-through. Not in the beta taxonomy, but the rec test needs a like-for-like
+  // baseline: without it, rec_card_clicked has no ordinary-card counterpart to compare to.
+  | 'card_clicked'
   | 'map_pin_clicked';
 
 export function capture(event: EventName, properties?: Record<string, unknown>) {

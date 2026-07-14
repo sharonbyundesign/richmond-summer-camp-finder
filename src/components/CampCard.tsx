@@ -6,6 +6,7 @@ import Image from 'next/image';
 import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { cityFromLocation, ageRange, sessionRange } from '@/lib/campCardFormat';
+import { categoryIcon, toCategories } from '@/lib/interest-categories';
 
 interface CampCardProps {
   /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
@@ -106,7 +107,7 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     const next = isSaved ? savedCamps.filter((id) => id !== camp.id) : [...savedCamps, camp.id];
 
     setIsSaved(!isSaved);
-    capture(isSaved ? 'camp_unsaved' : 'camp_saved', { camp_id: camp.id });
+    capture(isSaved ? 'camp_unsaved' : 'camp_saved', { camp_id: camp.id, camp_name: camp.name });
 
     try {
       await fetch(`/api/camps/${camp.id}/save`, { method: isSaved ? 'DELETE' : 'POST' });
@@ -118,9 +119,8 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     window.dispatchEvent(new Event('savedCampsUpdated'));
   };
 
-  const tags = (camp.camp_interests || [])
-    .map((interest) => interest.tag || interest.interest_name)
-    .filter((tag): tag is string => Boolean(tag));
+  // toCategories normalises and de-dupes raw tags into the canonical category set.
+  const tags = toCategories((camp.camp_interests || []).map((i) => i.tag || i.interest_name));
 
   const city = cityFromLocation(camp.location);
   const ages = ageRange(camp.camp_sessions);
@@ -170,8 +170,9 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
             {tags.slice(0, MAX_TAGS).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-800 shadow-sm"
+                className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-gray-800 shadow-sm"
               >
+                <span aria-hidden="true">{categoryIcon(tag)}</span>
                 {tag}
               </span>
             ))}
@@ -253,7 +254,13 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
               rel="noopener noreferrer"
               onClick={(event) => {
                 event.stopPropagation();
-                capture('registration_click', { camp_id: camp.id, url: camp.website_url });
+                // Sharon's taxonomy is already collecting on scouty-beta; keep her name
+                // so the outbound funnel stays one continuous series.
+                capture('camp_website_visited', {
+                  camp_id: camp.id,
+                  camp_name: camp.name,
+                  url: camp.website_url,
+                });
               }}
               className="inline-flex min-h-[36px] items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
             >
