@@ -47,8 +47,8 @@ export default function BetaBanner() {
       {/* One line at 375px. The long copy needs ~640px, so the narrow phone gets a
           shortened version rather than a wrap. */}
       <p className="truncate whitespace-nowrap">
-        <span className="sm:hidden">In beta — something off? </span>
-        <span className="hidden sm:inline">We&apos;re in beta — spot something off or missing? </span>
+        <span className="sm:hidden">early beta </span>
+        <span className="hidden sm:inline">Early beta — full site launches Jan 2027. Spot something off?  </span>
         <a
           href={FEEDBACK_URL}
           onClick={() => capture('beta_feedback_clicked')}
