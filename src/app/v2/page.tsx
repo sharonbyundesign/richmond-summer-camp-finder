@@ -7,7 +7,10 @@ import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SearchPill from '@/components/v2/SearchPill';
+import RecommendedSection from '@/components/v2/RecommendedSection';
 import type { MapMarker } from '@/components/v2/MapPanel';
+import { useFeatureFlag } from '@/lib/useFeatureFlag';
+import { capture, REC_FLAG } from '@/lib/analytics';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
 import { buildWeekOptions, campMatchesAges, campMatchesWeeks } from '@/lib/v2/weeks';
 import { lookupZip, campCoord, haversineMiles } from '@/lib/v2/geo';
@@ -221,6 +224,14 @@ export default function VersionB() {
     fetchCamps();
   }, [fetchCamps]);
 
+  // zip_entered fires once per completed 5-digit zip, not on every keystroke.
+  const lastZipRef = useRef<string>('');
+  useEffect(() => {
+    if (pill.zip.length !== 5 || pill.zip === lastZipRef.current) return;
+    lastZipRef.current = pill.zip;
+    capture('zip_entered', { zip: pill.zip, resolved: lookupZip(pill.zip) !== null });
+  }, [pill.zip]);
+
   const zipCenter = useMemo(() => (pill.zip.length === 5 ? lookupZip(pill.zip) : null), [pill.zip]);
   const zipStatus: 'idle' | 'ok' | 'notfound' =
     pill.zip.length < 5 ? 'idle' : zipCenter ? 'ok' : 'notfound';
@@ -318,6 +329,21 @@ export default function VersionB() {
 
   const hasPillSelections = pill.ages.length > 0 || pill.weeks.length > 0 || pill.zip.length > 0;
 
+  /** Diffs the pill so age_added / radius_changed fire on the actual change, not on every render. */
+  const handlePillChange = useCallback(
+    (next: typeof pill) => {
+      const added = next.ages.filter((age) => !pill.ages.includes(age));
+      if (added.length > 0) {
+        capture('age_added', { age: added[0], count: next.ages.length });
+      }
+      if (next.radius !== pill.radius) {
+        capture('radius_changed', { radius: next.radius });
+      }
+      setPill(next);
+    },
+    [pill, setPill]
+  );
+
   const clearAll = () => {
     setPill(EMPTY_PILL);
     setInterests([]);
@@ -343,6 +369,27 @@ export default function VersionB() {
     if (isDesktop) setMobileMapOpen(false);
   }, [isDesktop]);
 
+  /**
+   * Recommended section gating.
+   *
+   * Assignment comes only from the PostHog `rec-enabled` flag (50/50, sticky per
+   * visitor). There is no URL-parameter override on purpose: this launches into a
+   * Facebook group, and a `?variant=` link pasted there would hand everyone who
+   * clicked it the same bucket.
+   *
+   * The extra age-or-zip condition is what makes recommendations feel contextual
+   * rather than random — a parent who has told us nothing gets nothing.
+   */
+  const recFlagOn = useFeatureFlag(REC_FLAG);
+  const hasRecContext = pill.ages.length > 0 || pill.zip.length === 5;
+  const showRecommended = recFlagOn && hasRecContext;
+
+  const distanceById = useMemo(() => {
+    const map = new Map<string, number | null>();
+    decorated.forEach(({ camp, distance }) => map.set(camp.id, radiusActive ? distance : null));
+    return map;
+  }, [decorated, radiusActive]);
+
   const mapCaption = radiusActive
     ? `${listed.length} within ${pill.radius} mi`
     : `${markers.length} camp${markers.length === 1 ? '' : 's'} mapped`;
@@ -366,9 +413,10 @@ export default function VersionB() {
         <div className="max-w-3xl">
           <SearchPill
             state={pill}
-            onChange={setPill}
+            onChange={handlePillChange}
             weekOptions={weekOptions}
             zipStatus={zipStatus}
+            onSegmentOpen={(segment) => capture('search_pill_opened', { segment })}
             onSearch={() => {
               /* Results are already live; the button just dismisses the popover. */
             }}
@@ -527,6 +575,8 @@ export default function VersionB() {
 
           {!loading && !error && (
             <>
+              {showRecommended && <RecommendedSection camps={camps} distances={distanceById} />}
+
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-gray-600">
                   {listed.length === 0
@@ -547,7 +597,11 @@ export default function VersionB() {
                   <select
                     id="sort"
                     value={sort}
-                    onChange={(event) => setSortOverride(event.target.value as SortMode)}
+                    onChange={(event) => {
+                      const mode = event.target.value as SortMode;
+                      capture('sort_changed', { sort: mode });
+                      setSortOverride(mode);
+                    }}
                     className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="distance">Distance</option>
@@ -637,7 +691,10 @@ export default function VersionB() {
                 caption={mapCaption}
                 highlightedId={hoveredCampId}
                 selectedId={selectedCampId}
-                onSelect={setSelectedCampId}
+                onSelect={(campId) => {
+                  if (campId) capture('map_pin_clicked', { camp_id: campId });
+                  setSelectedCampId(campId);
+                }}
               />
             </div>
           </aside>
@@ -656,7 +713,10 @@ export default function VersionB() {
                 caption={mapCaption}
                 highlightedId={hoveredCampId}
                 selectedId={selectedCampId}
-                onSelect={setSelectedCampId}
+                onSelect={(campId) => {
+                  if (campId) capture('map_pin_clicked', { camp_id: campId });
+                  setSelectedCampId(campId);
+                }}
               />
             </div>
           )}

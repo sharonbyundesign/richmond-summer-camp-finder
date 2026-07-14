@@ -14,11 +14,26 @@ interface SearchPillProps {
   weekOptions: WeekOption[];
   zipStatus: 'idle' | 'loading' | 'ok' | 'notfound';
   onSearch: () => void;
+  /** Fires only when a segment opens, not when it closes. */
+  onSegmentOpen?: (segment: 'age' | 'weeks' | 'zip') => void;
 }
 
-export default function SearchPill({ state, onChange, weekOptions, zipStatus, onSearch }: SearchPillProps) {
+export default function SearchPill({
+  state,
+  onChange,
+  weekOptions,
+  zipStatus,
+  onSearch,
+  onSegmentOpen,
+}: SearchPillProps) {
   const [open, setOpen] = useState<Segment>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const toggleSegment = (segment: 'age' | 'weeks' | 'zip') => {
+    const next = open === segment ? null : segment;
+    if (next) onSegmentOpen?.(next);
+    setOpen(next);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +90,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
           value={ageSummary}
           active={open === 'age'}
           filled={state.ages.length > 0}
-          onClick={() => setOpen(open === 'age' ? null : 'age')}
+          onClick={() => toggleSegment('age')}
         />
         <Divider />
         <Segment
@@ -83,7 +98,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
           value={weekSummary}
           active={open === 'weeks'}
           filled={state.weeks.length > 0}
-          onClick={() => setOpen(open === 'weeks' ? null : 'weeks')}
+          onClick={() => toggleSegment('weeks')}
         />
         <Divider />
         <Segment
@@ -91,7 +106,7 @@ export default function SearchPill({ state, onChange, weekOptions, zipStatus, on
           value={zipSummary}
           active={open === 'zip'}
           filled={state.zip.length === 5}
-          onClick={() => setOpen(open === 'zip' ? null : 'zip')}
+          onClick={() => toggleSegment('zip')}
         />
 
         <div className="flex items-center pr-2">

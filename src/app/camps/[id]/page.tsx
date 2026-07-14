@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import GoogleReviewsLink from '@/components/GoogleReviewsLink';
+import { capture } from '@/lib/analytics';
 
 interface CampSession {
   id?: string;
@@ -33,6 +35,7 @@ interface Camp {
   description?: string;
   website_url?: string;
   image_url?: string | null;
+  place_id?: string | null;
   day_type?: string | null;
   zipcode_id?: number;
   camp_sessions?: CampSession[];
@@ -254,16 +257,23 @@ export default function CampDetailPage() {
               </div>
             )}
 
-            {camp.website_url && (
-              <a
-                href={camp.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
-              >
-                Visit Website
-              </a>
-            )}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              {camp.website_url && (
+                <a
+                  href={camp.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    capture('registration_click', { camp_id: camp.id, url: camp.website_url })
+                  }
+                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Visit Website
+                </a>
+              )}
+
+              <GoogleReviewsLink camp={camp} />
+            </div>
           </div>
         </div>
 
