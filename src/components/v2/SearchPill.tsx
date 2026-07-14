@@ -84,7 +84,9 @@ export default function SearchPill({
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex items-stretch rounded-full border border-gray-300 bg-white shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md">
+      {/* Below sm the three segments stack: side by side at 375px they get ~56px of text
+          each after padding, which truncates "Any week" into nonsense. */}
+      <div className="flex flex-col rounded-2xl border border-gray-300 bg-white shadow-sm transition-shadow focus-within:shadow-md hover:shadow-md sm:flex-row sm:items-stretch sm:rounded-full">
         <Segment
           label="Age"
           value={ageSummary}
@@ -109,14 +111,14 @@ export default function SearchPill({
           onClick={() => toggleSegment('zip')}
         />
 
-        <div className="flex items-center pr-2">
+        <div className="p-3 sm:flex sm:items-center sm:p-0 sm:pr-2">
           <button
             type="button"
             onClick={() => {
               setOpen(null);
               onSearch();
             }}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-blue-600 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-11 sm:gap-0"
             aria-label="Search camps"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,6 +129,7 @@ export default function SearchPill({
                 d="M21 21l-4.35-4.35M19 11a8 8 0 11-16 0 8 8 0 0116 0z"
               />
             </svg>
+            <span className="sm:hidden">Search camps</span>
           </button>
         </div>
       </div>
@@ -295,7 +298,8 @@ export default function SearchPill({
 }
 
 function Divider() {
-  return <div className="my-2 w-px shrink-0 bg-gray-200" />;
+  // Horizontal rule when stacked, vertical hairline when the pill is a row.
+  return <div className="mx-5 h-px shrink-0 bg-gray-200 sm:mx-0 sm:my-2 sm:h-auto sm:w-px" />;
 }
 
 function Popover({ children }: { children: React.ReactNode }) {
@@ -323,7 +327,7 @@ function Segment({
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-w-0 flex-1 flex-col items-start rounded-full px-5 py-2.5 text-left transition-colors ${
+      className={`flex min-h-[52px] min-w-0 flex-1 flex-col items-start justify-center rounded-2xl px-5 py-2.5 text-left transition-colors sm:min-h-0 sm:rounded-full ${
         active ? 'bg-gray-100' : 'hover:bg-gray-50'
       }`}
     >
