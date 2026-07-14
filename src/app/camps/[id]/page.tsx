@@ -316,7 +316,7 @@ export default function CampDetailPage() {
         {/* Sessions Section */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Available Sessions ({sortedSessions.length})
+            Camp Sessions ({sortedSessions.length})
           </h2>
 
           {sortedSessions.length === 0 ? (
