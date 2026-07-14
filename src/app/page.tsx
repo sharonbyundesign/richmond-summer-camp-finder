@@ -724,7 +724,11 @@ export default function Home() {
               setMobileMapOpen(next);
               capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
             }}
-            className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-gray-800"
+            /* Sits above the consent notice while that's up (it's fixed at z-[60] and
+               would otherwise cover this button on first visit), and drops back to the
+               normal 1.5rem inset once consent is dismissed. */
+            style={{ bottom: 'calc(1.5rem + var(--consent-height, 0px))' }}
+            className="fixed left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-[bottom] hover:bg-gray-800"
           >
             {mobileMapOpen ? (
               <>
