@@ -44,6 +44,24 @@ interface Camp {
   camp_interests?: CampInterest[];
 }
 
+type SessionStatus = 'past' | 'in-progress' | 'upcoming';
+
+/** Postgres `date` columns come back as YYYY-MM-DD (occasionally with a time suffix); only the date part matters. */
+function dateOnly(value: string): string {
+  return value.slice(0, 10);
+}
+
+/** Today's date in America/New_York as YYYY-MM-DD, so "past" doesn't depend on the viewer's local timezone. */
+function todayInNewYork(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+}
+
+function getSessionStatus(session: CampSession, todayNY: string): SessionStatus {
+  if (dateOnly(session.end_date) < todayNY) return 'past';
+  if (dateOnly(session.start_date) <= todayNY) return 'in-progress';
+  return 'upcoming';
+}
+
 export default function CampDetailPage() {
   const params = useParams();
   const [camp, setCamp] = useState<Camp | null>(null);
@@ -173,12 +191,20 @@ export default function CampDetailPage() {
     );
   }
 
-  // Sort sessions by start date
+  // Upcoming/in-progress sessions first (soonest start first); past sessions last (most recently ended first).
+  const todayNY = todayInNewYork();
   const sortedSessions = [...(camp.camp_sessions || [])].sort((a, b) => {
-    const dateA = new Date(a.start_date).getTime();
-    const dateB = new Date(b.start_date).getTime();
-    return dateA - dateB;
+    const aPast = getSessionStatus(a, todayNY) === 'past';
+    const bPast = getSessionStatus(b, todayNY) === 'past';
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return aPast
+      ? dateOnly(b.end_date).localeCompare(dateOnly(a.end_date))
+      : dateOnly(a.start_date).localeCompare(dateOnly(b.start_date));
   });
+
+  const allSessionsPast =
+    sortedSessions.length > 0 && sortedSessions.every((s) => getSessionStatus(s, todayNY) === 'past');
+  const mostRecentSessionYear = allSessionsPast ? dateOnly(sortedSessions[0].end_date).slice(0, 4) : null;
 
   const reportUrl = feedbackMailto(`Incorrect info: ${camp.name}`);
 
@@ -295,13 +321,22 @@ export default function CampDetailPage() {
           {sortedSessions.length === 0 ? (
             <p className="text-gray-500">No sessions available for this camp.</p>
           ) : (
-            <div className="space-y-6">
+            <>
+              {allSessionsPast && (
+                <p className="mb-4 text-sm text-gray-600">
+                  All {mostRecentSessionYear} sessions have ended.
+                </p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
               {sortedSessions.map((session, idx) => {
                 const isSaved = session.id ? savedSessionIds.has(session.id) : false;
-                
+                const status = getSessionStatus(session, todayNY);
+                const isPast = status === 'past';
+                const fieldTextClass = isPast ? 'text-gray-500' : 'text-gray-900';
+
                 const handleSaveToggle = async (e: React.MouseEvent) => {
                   e.preventDefault();
-                  if (!session.id) return;
+                  if (!session.id || isPast) return;
 
                   const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
                   let newSavedSessions: string[];
@@ -335,12 +370,15 @@ export default function CampDetailPage() {
                 return (
                   <div
                     key={session.id || idx}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow relative"
+                    className={`border border-gray-200 rounded-lg p-6 transition-shadow relative ${
+                      isPast ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'
+                    }`}
                   >
                     {/* Save Button */}
                     <button
                       onClick={handleSaveToggle}
-                      className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-50 rounded-full shadow-sm transition-all z-10"
+                      disabled={isPast}
+                      className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-50 rounded-full shadow-sm transition-all z-10 disabled:cursor-not-allowed"
                       aria-label={isSaved ? 'Unsave session' : 'Save session'}
                       title={isSaved ? 'Unsave session' : 'Save session'}
                     >
@@ -375,15 +413,27 @@ export default function CampDetailPage() {
 
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                          {session.label || session.name || `Session ${idx + 1}`}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <h3 className={`text-xl font-semibold ${fieldTextClass}`}>
+                            {session.label || session.name || `Session ${idx + 1}`}
+                          </h3>
+                          {isPast && (
+                            <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+                              Ended
+                            </span>
+                          )}
+                          {status === 'in-progress' && (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                              In progress
+                            </span>
+                          )}
+                        </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Dates */}
                         <div>
                           <p className="text-sm font-medium text-gray-500 mb-1">Dates</p>
-                          <p className="text-gray-900">
+                          <p className={fieldTextClass}>
                             {formatDate(session.start_date)} - {formatDate(session.end_date)}
                           </p>
                         </div>
@@ -392,7 +442,7 @@ export default function CampDetailPage() {
                         {session.start_time && session.end_time && (
                           <div>
                             <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
-                            <p className="text-gray-900">
+                            <p className={fieldTextClass}>
                               {formatTime(session.start_time)} - {formatTime(session.end_time)}
                             </p>
                           </div>
@@ -402,7 +452,7 @@ export default function CampDetailPage() {
                         {session.days_of_week && session.days_of_week.length > 0 && (
                           <div>
                             <p className="text-sm font-medium text-gray-500 mb-1">Days</p>
-                            <p className="text-gray-900">{formatDaysOfWeek(session.days_of_week)}</p>
+                            <p className={fieldTextClass}>{formatDaysOfWeek(session.days_of_week)}</p>
                           </div>
                         )}
 
@@ -410,7 +460,7 @@ export default function CampDetailPage() {
                         {(session.min_age != null || session.max_age != null) && (
                           <div>
                             <p className="text-sm font-medium text-gray-500 mb-1">Age Range</p>
-                            <p className="text-gray-900">
+                            <p className={fieldTextClass}>
                               Ages {session.min_age ?? '?'} - {session.max_age ?? '?'}
                             </p>
                           </div>
@@ -420,7 +470,7 @@ export default function CampDetailPage() {
                         {session.price != null && (
                           <div>
                             <p className="text-sm font-medium text-gray-500 mb-1">Price</p>
-                            <p className="text-lg font-semibold text-green-600">
+                            <p className={`text-lg font-semibold ${isPast ? 'text-gray-500' : 'text-green-600'}`}>
                               ${session.price.toFixed(2)}
                             </p>
                           </div>
@@ -430,7 +480,7 @@ export default function CampDetailPage() {
                         {session.capacity != null && (
                           <div>
                             <p className="text-sm font-medium text-gray-500 mb-1">Capacity</p>
-                            <p className="text-gray-900">{session.capacity} spots</p>
+                            <p className={fieldTextClass}>{session.capacity} spots</p>
                           </div>
                         )}
                       </div>
@@ -439,7 +489,8 @@ export default function CampDetailPage() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
         </div>
 
