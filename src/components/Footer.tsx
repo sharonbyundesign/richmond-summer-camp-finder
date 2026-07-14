@@ -17,6 +17,9 @@ export default function Footer() {
           <Link href="/disclaimer" className="hover:text-gray-700">
             Disclaimer
           </Link>
+          <a href="mailto:scoutyrva@gmail.com" className="hover:text-gray-700">
+            Contact Us
+          </a>
         </nav>
       </div>
     </footer>
