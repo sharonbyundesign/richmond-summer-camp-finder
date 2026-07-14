@@ -84,18 +84,23 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   '060bfd6d-0cba-4616-989d-d6eae1454512': 'photo-1621004612697-2b177e183326', // Bella Ballerina, Chesterfield
   '8904e113-9f8c-4515-a3d9-298fc57e0473': 'photo-1621004612697-2b177e183326', // Bella Ballerina, Short Pump
   '91de4858-4f00-45ef-84fd-408a1020215c': 'photo-1519076976365-9c64dbd98317', // Bach to Rock Midlothian
+  '4d70fd67-0c63-47f4-8bbc-1467e04cbf51': 'photo-1569616813007-8dede61a698e', // Blue Sky Fund Outdoor Leadership Institute
   '4fed686d-59c3-4c3e-9664-bdfe1363cc23': 'photo-1631106256072-54c89defe828', // Bricks 4 Kidz Richmond
   '0d9e8c41-1d2a-4d89-b951-06c1d7b5e327': 'photo-1594913495702-0872744c6968', // Brilliant Summer
   '1943d3dc-d1c3-438b-98d1-6e2e9cb029ab': 'photo-1464692805480-a69dfaafdb0d', // Camp Baker at SOAR 365
   'bd6ddca2-1de8-47fe-9ef4-d5b99b28c498': 'photo-1587786255280-7836bf020cd6', // Camp Sensory House
   'cfec49c4-58f5-4a79-94fa-e9e8873bc104': 'photo-1508344928928-7165b67de128', // Camp Tuckahoe
   '9cb16667-0680-43fa-965e-c3325420ee2b': 'photo-1506845347893-bc5faede1eec', // Civil War Adventure Camp
+  '54cdbc57-f361-4ac9-af1f-00b285d63309': 'photo-1780006393664-142ed57a1593', // Club SciKidz / Tech Scientific
   '15844129-6b4b-49fc-829c-a6f201c83ef1': 'photo-1617117206620-b01f2919ff86', // Collegiate School
   '84c3bd65-ee40-43be-9cc6-3210eafd795e': 'photo-1738658024539-a8d1527fa8e8', // Comedy Sportz
   'd65f5f76-fcc2-43db-bf8e-1603e57e4040': 'photo-1655842556539-db2d2099ded1', // Core Kids Academy
   'f48735d4-2a32-4233-84ff-3fce19135f3c': 'photo-1613950190144-4f2a84c75e8c', // Cultural Arts Center at Glen Allen
   '2dda34c7-aaac-4dd7-ae8d-efcd2da728f9': 'photo-1490383559880-5003a7baa963', // Discovery Center Stony Point
+  '9eb0fc7c-4096-4591-b947-c4743a5ac663': 'photo-1607211851821-8be3cd6146f0', // Doodle Dynamo Art Camp
   '000b00e9-2b1d-4b59-b00b-a1f66a73bd0d': 'photo-1602957417690-53488d19faa4', // First Tee Greater Richmond
+  '2cb42ecb-a7a2-40b1-8b1f-32a37f691d54': 'flagged/photo-1567116681178-c326fa4e2c8b', // Greenspring Academy of Music Summer Institutes
+  '7eb42b3b-bf37-4c28-8b9e-5e719660f804': 'photo-1678027783638-345d5041b529', // GRSM Summer Music Camps
   '3c7ab356-fbb0-4ac6-9e47-3c279f983a86': 'photo-1605202764282-89f3fbce5c16', // James River Association
   '45d17c65-a8f5-49cc-ae9c-6172c704ee01': 'photo-1490750967868-88aa4486c946', // Lewis Ginter Botanical Garden
   '6a34e1d8-c5bc-4ce3-82f6-35cf2c8d8079': 'photo-1653015503992-347de54a8125', // M14 Hoops
@@ -106,13 +111,15 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   'a78be5cc-be7e-4100-8e12-d73d8746abce': 'photo-1711048421235-3fcb9dcf82f7', // Mosley Music Camps
   'f918c545-8ddc-42a0-80ec-e5991911b641': 'photo-1530560643359-6d2fead989b3', // My Taekwondo Summer Camp
   'aab87506-1ef6-4e08-9d18-9884caf9769e': 'photo-1587683437362-da7775ffc532', // Nike Tennis Camp at VCU
-  '8b51275e-df82-4241-a196-6b3323c0e88c': 'photo-1552474705-dd8183e00901', // Pactamere Farm
+  'b04d4aa8-741c-4f29-8a7c-c6290bc6d31b': 'photo-1571008592377-e362723e8998', // Overtime Athletics RVA
+  '8b51275e-df82-4241-a196-6b3323c0e88c': 'photo-1617096000801-bd71df8d6d8f', // Pactamere Farm
   '92916235-6426-4272-92f3-e6242a87c399': 'photo-1659666287295-7da26c3f80d4', // Passages Adventure Camp
   '41d1cede-0475-476b-9342-68a54b87fff2': 'photo-1730127143739-9dc06877bb7f', // Pipeline Adventure Camp
   'c23b2296-55fb-46c3-ac79-ad149d46be25': 'photo-1489710437720-ebb67ec84dd2', // RAS Camp Adventure Weeks
   '64c3fe49-80cb-444d-aa0c-fc63acc8541a': 'photo-1524594152303-9fd13543fe6e', // Releve RVA
   'f5cd9f4c-d587-49a7-92e0-f086e813349a': 'photo-1505619656705-59ebc350b547', // Richmond Fencing Club
   '8843bb79-b66d-4720-b949-eb1ea2b3aa81': 'photo-1601979031925-424e53b6caaa', // Richmond SPCA Critter Camp
+  'b6d49dfb-6d96-47c0-8d09-d2afc69aeca1': 'flagged/photo-1568127539877-487e4825ec58', // Richmond Spider Soccer Summer Camps
   '163b966f-22bb-4096-82a3-7051156474fb': 'photo-1592656094267-764a45160876', // Richmond Volleyball Club
   '55327b36-491c-454f-ad1d-f2c598cfbac2': 'photo-1555597673-b21d5c935865', // RISE Martial Arts
   '57bd1cd2-cf11-413b-a05d-ce1c54e7cda6': 'photo-1564325724739-bae0bd08762c', // RITS Summer Camp
@@ -125,17 +132,27 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   'd4042189-b6fb-47f8-a4bd-8b72b7099583': 'photo-1682953390639-381112a2c4f0', // SkateNation Plus
   'baa1a3cb-38c1-4d77-8c6f-6191bd35aeab': 'photo-1566140967404-b8b3932483f5', // Snapology of Glen Allen
   '5d0c9777-3fb6-436c-acdc-52aa44c0a123': 'photo-1612078311896-bc64c28a6749', // SPARC Summer
+  '352a26c4-f524-4452-b5c1-e953a2fa9f8f': 'photo-1639682687087-721b80c5538b', // Spotlights Camp
+  'e46f66f1-5742-4e8b-bc27-971ce6dfa94a': 'photo-1667386428097-74781c692dfb', // Stage Explorers Camp
   'cae877fe-fdca-4546-822a-7493c56c5f31': 'photo-1503454537195-1dcabb73ffb9', // St. Michael's Episcopal School
   'c4031cda-e541-4642-bf49-d78288d63450': 'photo-1469406396016-013bfae5d83e', // Steward Summer Experience
+  '2874f321-7f08-4ca8-b893-6398ae4c35b4': 'photo-1512253080918-79cf0c2e0650', // Summer Art Camp at Atlee Art Loft
+  '00befc88-c397-40d5-aa78-ef533bb2243a': 'photo-1551401107-5d806c2909a6', // Summer Art Camp at Flow Zone RVA
   '5456b226-926f-40f6-b22e-55fecc4961c7': 'photo-1527430253228-e93688616381', // Sylvan Edge Camps
   '03916606-8fbc-4883-b8eb-c33b76362471': 'photo-1634128221889-82ed6efebfc3', // The Language Hub
+  '2a6bf5a7-49e8-4c6c-98d9-45d8c096f409': 'photo-1568126709698-2c92f8831a70', // Thrive Arts Summer Camps
   '2fd8080a-967d-4470-b869-003bf54d8e7e': 'photo-1656653121475-e33829581294', // True Black Belt, Ashland
   'becfd372-9b27-4e8c-9ec7-07829ec41571': 'photo-1656653121475-e33829581294', // True Black Belt, Glen Allen
   '2d72a18d-7729-46ae-b62a-4095ddb206b9': 'photo-1655842556563-2c28adb3fcc5', // Twist Gymnastics
   '9c1579df-7631-4c9a-ad84-3c740d7953ae': 'photo-1574744918163-6cef6f4a31b0', // University of Richmond Swim
   '1b282a9f-a13d-4daf-96e7-0cb4c8d51cb0': 'photo-1524621880920-5a6a9a3b239e', // Unscripted Fun
   'cb9e9ae9-5c24-411f-a6d1-12e34d6a02ee': 'photo-1613002864759-130aad1f3e99', // Virginia Outside
+  '11ee2bb2-3e47-4438-b343-5e3286cd20dc': 'photo-1702523848807-6069524380eb', // Virginia Repertory Theatre Camps
+  'c3c9d422-4df3-4677-986b-97e91d07df79': 'photo-1708795921259-263a5e973acb', // Visual Arts Center of Richmond Summer Camps
   '16dcf5f5-ad71-4934-8645-2075134426dc': 'photo-1459908676235-d5f02a50184b', // VMFA Summer Camps
+  '72d9c37c-5704-427d-8641-0411b95718f8': 'photo-1779398422654-ea500a9649c3', // YMCA of Greater Richmond Summer Camp
+  '38f94d13-13c4-40cf-a3cd-ed032788a12d': 'photo-1769720205199-ac0d647e7fca', // Young Chefs Academy Richmond
+  '3ba98e8c-6271-4101-a7d9-e6b80d67d8a9': 'photo-1667384439505-b2a5a1486dfe', // Young Performers Institute
 };
 
 // Landscape crop that suits the card (h-44), map popup (h-24) and detail hero

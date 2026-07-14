@@ -47,14 +47,14 @@ export default function BetaBanner() {
       {/* One line at 375px. The long copy needs ~640px, so the narrow phone gets a
           shortened version rather than a wrap. */}
       <p className="truncate whitespace-nowrap">
-        <span className="sm:hidden">early beta </span>
-        <span className="hidden sm:inline">Early beta — full site launches Jan 2027. Spot something off?  </span>
+        <span className="sm:hidden">We&rsquo;re new &amp; improving. </span>
+        <span className="hidden sm:inline">This is an early version and some camp info may be incomplete. Help us get it right &rarr;  </span>
         <a
           href={FEEDBACK_URL}
           onClick={() => capture('beta_feedback_clicked')}
           className="font-medium underline underline-offset-2 hover:text-blue-700"
         >
-          Tell us
+          Send feedback
         </a>
       </p>
 
