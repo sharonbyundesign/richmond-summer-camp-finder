@@ -141,6 +141,22 @@ export default function Home() {
 
   const isDesktop = useIsDesktop();
 
+  /**
+   * The full-screen mobile map hangs below the header. It used to hardcode 64px, which
+   * held only while the header was the topmost thing on screen — the beta banner now sits
+   * above it, so at scroll-top the header is pushed down and a 64px offset would cover its
+   * bottom half. Measure instead. Body scroll is locked while the map is open, so the
+   * header can't move underneath us and one reading at open time stays correct.
+   */
+  const headerRef = useRef<HTMLElement>(null);
+  const [mapTop, setMapTop] = useState(64);
+
+  useEffect(() => {
+    if (!mobileMapOpen) return;
+    const bottom = headerRef.current?.getBoundingClientRect().bottom;
+    if (bottom != null) setMapTop(Math.max(0, bottom));
+  }, [mobileMapOpen]);
+
   useEffect(() => {
     const fetchInterests = async () => {
       try {
@@ -377,7 +393,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header — fixed 64px (h-16); the sticky map's top offset depends on this. */}
-      <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+      <header
+        ref={headerRef}
+        className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70"
+      >
         <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <h1 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">
             Richmond Summer Camp Finder
@@ -686,7 +705,7 @@ export default function Home() {
       {!isDesktop && (
         <>
           {mobileMapOpen && (
-            <div className="fixed inset-x-0 bottom-0 top-16 z-40">
+            <div className="fixed inset-x-0 bottom-0 z-40" style={{ top: mapTop }}>
               <MapPanel
                 markers={markers}
                 center={zipCenter}
@@ -705,7 +724,11 @@ export default function Home() {
               setMobileMapOpen(next);
               capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
             }}
-            className="fixed bottom-6 left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-gray-800"
+            /* Sits above the consent notice while that's up (it's fixed at z-[60] and
+               would otherwise cover this button on first visit), and drops back to the
+               normal 1.5rem inset once consent is dismissed. */
+            style={{ bottom: 'calc(1.5rem + var(--consent-height, 0px))' }}
+            className="fixed left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-[bottom] hover:bg-gray-800"
           >
             {mobileMapOpen ? (
               <>

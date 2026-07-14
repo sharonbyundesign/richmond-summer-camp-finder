@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
 import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
+import { feedbackMailto } from '@/lib/contact';
 
 interface CampSession {
   id?: string;
@@ -178,6 +179,8 @@ export default function CampDetailPage() {
     const dateB = new Date(b.start_date).getTime();
     return dateA - dateB;
   });
+
+  const reportUrl = feedbackMailto(`Incorrect info: ${camp.name}`);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -439,6 +442,18 @@ export default function CampDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Footnote — deliberately quiet. Detail page only; the cards stay uncluttered. */}
+        <p className="mt-6 text-center text-xs text-gray-400">
+          Something look wrong?{' '}
+          <a
+            href={reportUrl}
+            onClick={() => capture('report_incorrect_info_clicked', { camp_id: camp.id, camp_name: camp.name })}
+            className="underline underline-offset-2 hover:text-gray-600"
+          >
+            Report incorrect info
+          </a>
+        </p>
       </div>
     </main>
   );

@@ -57,6 +57,11 @@ export type EventName =
   | 'rec_section_viewed'
   | 'rec_card_clicked'
   | 'google_reviews_link_clicked'
+  // Data-quality feedback from the camp detail page footnote.
+  | 'report_incorrect_info_clicked'
+  // Beta banner: engage vs. close.
+  | 'beta_feedback_clicked'
+  | 'beta_banner_dismissed'
   // Existing funnel.
   | 'camp_saved'
   | 'camp_unsaved'

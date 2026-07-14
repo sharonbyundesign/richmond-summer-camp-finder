@@ -32,6 +32,12 @@ body {
   margin: 0;
 }
 
+/* Set by the blocking script in the root layout, before first paint, so a visitor who
+   already dismissed the beta banner never sees it flash in and collapse. */
+.beta-banner-dismissed [data-beta-banner] {
+  display: none;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
