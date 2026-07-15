@@ -127,7 +127,7 @@ export default function FilterPanel({
               }
             }}
             placeholder="Age"
-            className="w-24 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-24 px-4 py-2 border border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <button
             type="button"
@@ -321,16 +321,16 @@ export default function FilterPanel({
             value={filters.zip}
             onChange={(e) => onChange({ zip: e.target.value.replace(/\D/g, '').slice(0, 5) })}
             maxLength={5}
-            className="w-32 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-32 px-4 py-2 border border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <select
             value={filters.radius}
             onChange={(e) => onChange({ radius: parseInt(e.target.value, 10) })}
             aria-label="Search radius"
-            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+            className="px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
           >
             {RADIUS_OPTIONS.map((r) => (
-              <option key={r} value={r}>
+              <option key={r} value={r} className="text-gray-900">
                 {r} mi
               </option>
             ))}

@@ -287,7 +287,7 @@ export default function SearchPill({
                   onChange({ ...state, zip });
                   if (zip.length === 5) capture('zip_filter_applied', { radius_miles: state.radius });
                 }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -299,10 +299,10 @@ export default function SearchPill({
                 id="pill-radius"
                 value={state.radius}
                 onChange={(event) => onChange({ ...state, radius: Number(event.target.value) })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               >
                 {RADIUS_OPTIONS.map((miles) => (
-                  <option key={miles} value={miles}>
+                  <option key={miles} value={miles} className="text-gray-900">
                     {miles} mi
                   </option>
                 ))}
