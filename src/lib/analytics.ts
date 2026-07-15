@@ -76,6 +76,7 @@ export type EventName =
   | 'more_filters_opened'
   | 'filters_cleared'
   | 'mobile_map_toggled'
+  | 'tag_pill_clicked'
   // Card click-through. Not in the beta taxonomy, but the rec test needs a like-for-like
   // baseline: without it, rec_card_clicked has no ordinary-card counterpart to compare to.
   | 'card_clicked'
