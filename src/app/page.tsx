@@ -622,10 +622,15 @@ export default function Home() {
                       setSortOverride(next);
                       capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
                     }}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    // Explicit text-gray-900: without it the select inherits `body`'s
+                    // --foreground, which flips to a near-white gray under a dark
+                    // color-scheme preference — unreadable against this always-white
+                    // control. Options inherit the same color, so neither reads as
+                    // disabled/placeholder text.
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="distance">Distance</option>
-                    <option value="az">A–Z</option>
+                    <option value="distance" className="text-gray-900">Distance</option>
+                    <option value="az" className="text-gray-900">A–Z</option>
                   </select>
                 </div>
               </div>
