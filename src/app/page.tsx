@@ -9,6 +9,7 @@ import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SearchPill from '@/components/v2/SearchPill';
 import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
+import { useFilterState } from '@/lib/v2/useFilterState';
 import { buildWeekOptions, campMatchesAges, campMatchesWeeks } from '@/lib/v2/weeks';
 import { lookupZip, campCoord, haversineMiles } from '@/lib/v2/geo';
 import {
@@ -107,11 +108,31 @@ export default function Home() {
   // Modal filters — interests / session type / price, on the shared v1 Filters
   // model and applied server-side. Age, weeks, and zip live in the pill, so the
   // ages/weeks/zip fields here stay empty and their panel sections are hidden.
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  // Persisted to localStorage (like the pill) so they survive navigation, e.g.
+  // a tag-pill tap on the camp detail page.
+  const { state: filters, setState: setFilters, hydrated: filtersHydrated } = useFilterState();
   const patchFilters = useCallback(
     (patch: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...patch })),
-    [],
+    [setFilters],
   );
+
+  // Tag-pill hand-off: the camp detail page deep-links here with `?interest=`
+  // to replace the interest filter while leaving everything else — which lives
+  // in localStorage — untouched. Applied once localStorage has hydrated (so it
+  // wins over, rather than races, the stored value), then stripped from the
+  // URL so a later refresh or "Clear all" doesn't resurrect it.
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    const interest = params.get('interest');
+    if (!interest) return;
+
+    setFilters((prev) => ({ ...prev, interests: [interest] }));
+
+    params.delete('interest');
+    const query = params.toString();
+    window.history.replaceState(null, '', query ? `/?${query}` : '/');
+  }, [filtersHydrated, setFilters]);
 
   const [camps, setCamps] = useState<Camp[]>([]);
   const [allCamps, setAllCamps] = useState<Camp[]>([]);
@@ -606,10 +627,15 @@ export default function Home() {
                       setSortOverride(next);
                       capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
                     }}
-                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    // Explicit text-gray-900: without it the select inherits `body`'s
+                    // --foreground, which flips to a near-white gray under a dark
+                    // color-scheme preference — unreadable against this always-white
+                    // control. Options inherit the same color, so neither reads as
+                    // disabled/placeholder text.
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="distance">Distance</option>
-                    <option value="az">A–Z</option>
+                    <option value="distance" className="text-gray-900">Distance</option>
+                    <option value="az" className="text-gray-900">A–Z</option>
                   </select>
                 </div>
               </div>

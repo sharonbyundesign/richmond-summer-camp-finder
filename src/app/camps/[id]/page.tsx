@@ -281,13 +281,20 @@ export default function CampDetailPage() {
                 return categories.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {categories.map((category) => (
-                      <span
+                      <Link
                         key={category}
-                        className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
+                        href={`/?interest=${encodeURIComponent(category)}`}
+                        onClick={() => capture('tag_pill_clicked', { interest: category, camp_id: camp.id })}
+                        aria-label={`See all ${category} camps`}
+                        // Invisible py-2 + -my-2 hit-slop pushes the tap target to ~44px
+                        // tall without growing the visible pill.
+                        className="group -my-2 inline-flex cursor-pointer items-center py-2"
                       >
-                        <span aria-hidden="true">{categoryIcon(category)}</span>
-                        {category}
-                      </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 transition-colors group-hover:bg-blue-200 group-active:bg-blue-300">
+                          <span aria-hidden="true">{categoryIcon(category)}</span>
+                          {category}
+                        </span>
+                      </Link>
                     ))}
                   </div>
                 ) : null;
