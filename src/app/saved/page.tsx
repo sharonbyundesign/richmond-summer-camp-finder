@@ -5,7 +5,6 @@ import Link from 'next/link';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
-import SessionsCalendar from '@/components/SessionsCalendar';
 
 interface Camp {
   id: string;
@@ -54,6 +53,54 @@ interface SavedSession {
     name: string;
     location?: string;
   };
+}
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+interface MonthGroup {
+  key: string;
+  label: string;
+  monthSessions: SavedSession[];
+}
+
+// Group sessions by the month/year of their start date, ordered chronologically.
+function groupSessionsByMonth(sessions: SavedSession[]): MonthGroup[] {
+  const groups = new Map<string, MonthGroup>();
+  const undated: SavedSession[] = [];
+
+  sessions.forEach((session) => {
+    const date = session.start_date ? new Date(session.start_date) : null;
+    if (!date || isNaN(date.getTime())) {
+      undated.push(session);
+      return;
+    }
+
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        label: `${MONTH_NAMES[month]} ${year}`,
+        monthSessions: [],
+      });
+    }
+    groups.get(key)!.monthSessions.push(session);
+  });
+
+  const ordered = Array.from(groups.values()).sort((a, b) =>
+    a.key.localeCompare(b.key)
+  );
+
+  if (undated.length > 0) {
+    ordered.push({ key: 'undated', label: 'Dates TBD', monthSessions: undated });
+  }
+
+  return ordered;
 }
 
 export default function SavedCampsPage() {
@@ -342,33 +389,36 @@ export default function SavedCampsPage() {
                 )}
 
                 {!sessionsLoading && sessions.length > 0 && (
-                  <>
-                    {/* Calendar View */}
-                    <div className="mb-12">
-                      <SessionsCalendar sessions={sessions} />
-                    </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                      Saved Sessions ({sessions.length})
+                    </h2>
 
-                    {/* Session Cards */}
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                        Saved Sessions ({sessions.length})
-                      </h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                        {sessions.map((session) => {
-                          const camp = session.camps;
-                          if (!camp || !session.id) return null;
-                          return (
-                            <SessionCard
-                              key={session.id}
-                              session={session}
-                              campId={camp.id}
-                              campName={camp.name}
-                            />
-                          );
-                        })}
-                      </div>
+                    {/* Session Cards grouped by month */}
+                    <div className="space-y-10">
+                      {groupSessionsByMonth(sessions).map(({ key, label, monthSessions }) => (
+                        <div key={key}>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            {label}
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                            {monthSessions.map((session) => {
+                              const camp = session.camps;
+                              if (!camp || !session.id) return null;
+                              return (
+                                <SessionCard
+                                  key={session.id}
+                                  session={session}
+                                  campId={camp.id}
+                                  campName={camp.name}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {!sessionsLoading && !sessionsError && savedSessionIds.length > 0 && sessions.length === 0 && (
