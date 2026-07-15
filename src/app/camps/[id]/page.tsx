@@ -313,22 +313,19 @@ export default function CampDetailPage() {
           </div>
         </div>
 
-        {/* Sessions Section */}
+        {/* Sessions Section — hidden entirely when no sessions have been added yet */}
+        {sortedSessions.length > 0 && (
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
             Camp Sessions ({sortedSessions.length})
           </h2>
 
-          {sortedSessions.length === 0 ? (
-            <p className="text-gray-500">No sessions available for this camp.</p>
-          ) : (
-            <>
-              {allSessionsPast && (
-                <p className="mb-4 text-sm text-gray-600">
-                  All {mostRecentSessionYear} sessions have ended.
-                </p>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+          {allSessionsPast && (
+            <p className="mb-4 text-sm text-gray-600">
+              All {mostRecentSessionYear} sessions have ended.
+            </p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
               {sortedSessions.map((session, idx) => {
                 const isSaved = session.id ? savedSessionIds.has(session.id) : false;
                 const status = getSessionStatus(session, todayNY);
@@ -490,10 +487,9 @@ export default function CampDetailPage() {
                   </div>
                 );
               })}
-              </div>
-            </>
-          )}
+          </div>
         </div>
+        )}
 
         {/* Footnote — deliberately quiet. Detail page only; the cards stay uncluttered. */}
         <p className="mt-6 text-center text-xs text-gray-400">
