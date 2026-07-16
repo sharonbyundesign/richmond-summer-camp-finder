@@ -16,6 +16,7 @@ const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 export const REC_FLAG = 'rec-enabled';
 
 let started = false;
+const readyListeners = new Set<() => void>();
 
 /**
  * No key means no PostHog: every capture below becomes a no-op and feature flags
@@ -41,10 +42,28 @@ export function initAnalytics() {
   });
 
   started = true;
+  readyListeners.forEach((listener) => listener());
+  readyListeners.clear();
 }
 
 export function isAnalyticsReady() {
   return started;
+}
+
+/**
+ * Notifies once `initAnalytics` has run. `Providers` calls `initAnalytics` from its own
+ * effect, which — because React fires child effects before parent effects — can run
+ * *after* a descendant's mount-time effect already checked `isAnalyticsReady()` and found
+ * it false. Without this, that descendant has no way to learn analytics became ready
+ * later and gets stuck treating it as never-ready (see useFeatureFlag).
+ */
+export function onAnalyticsReady(callback: () => void): () => void {
+  if (started) {
+    callback();
+    return () => {};
+  }
+  readyListeners.add(callback);
+  return () => readyListeners.delete(callback);
 }
 
 /**
