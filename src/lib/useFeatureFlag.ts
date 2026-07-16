@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { isFlagEnabled, onFlagsLoaded, isAnalyticsReady } from '@/lib/analytics';
+import { isFlagEnabled, onFlagsLoaded, onAnalyticsReady } from '@/lib/analytics';
 
 /**
  * Resolves a PostHog feature flag.
@@ -20,10 +20,17 @@ export function useFeatureFlag(flag: string): boolean {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if (!isAnalyticsReady()) return;
+    let unsubscribeFlags = () => {};
 
-    setEnabled(isFlagEnabled(flag));
-    return onFlagsLoaded(() => setEnabled(isFlagEnabled(flag)));
+    const unsubscribeReady = onAnalyticsReady(() => {
+      setEnabled(isFlagEnabled(flag));
+      unsubscribeFlags = onFlagsLoaded(() => setEnabled(isFlagEnabled(flag)));
+    });
+
+    return () => {
+      unsubscribeReady();
+      unsubscribeFlags();
+    };
   }, [flag]);
 
   return enabled;
