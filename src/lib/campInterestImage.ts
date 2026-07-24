@@ -153,6 +153,22 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   '72d9c37c-5704-427d-8641-0411b95718f8': 'photo-1779398422654-ea500a9649c3', // YMCA of Greater Richmond Summer Camp
   '38f94d13-13c4-40cf-a3cd-ed032788a12d': 'photo-1769720205199-ac0d647e7fca', // Young Chefs Academy Richmond
   '3ba98e8c-6271-4101-a7d9-e6b80d67d8a9': 'photo-1667384439505-b2a5a1486dfe', // Young Performers Institute
+  // 2026 batch 2 (added 2026-07-24)
+  'd175543b-2064-49ef-b12c-885a046f98a5': 'photo-1533873984035-25970ab07461', // Cub Scout Day Camp at Deep Run Park
+  '400850a3-544b-4ca3-ad74-1bafab2dd0d7': 'photo-1606092195730-5d7b9af1efc5', // Henrico Education Foundation Summer Camps
+  '2f41f59b-7653-42bc-8a26-2e76401ee451': 'photo-1576724196706-3f23f51ea351', // Passion Academy Summer Camps
+  'cdd5ff9d-6630-4f55-b554-b7a525ecde34': 'photo-1553284965-83fd3e82fa5a', // Tall Cedars Farm Equestrian Day Camp
+  '5725c5ec-9f3f-4d3e-b8ee-4fa9510953de': 'photo-1560421683-6856ea585c78', // Children's Art Classes Summer Camps
+  '18722a46-7989-49c0-a478-a0e159091006': 'photo-1533222481259-ce20eda1e20b', // Let's Grow, Henrico! Summer Camp
+  '69d3a631-3b80-448b-901e-aa0780145783': 'photo-1563902315161-7d8184684f79', // Jacob's Chance Summer Camps
+  '83a5c64c-8c71-4a42-874b-b5cba5a607e3': 'photo-1489710437720-ebb67ec84dd2', // Summer Saints Day Camp
+  '5069e503-1ff4-41a8-8297-62ae98294e41': 'photo-1622659097509-4d56de14539e', // Soccer Shots Richmond
+  'aa28de69-e922-4807-9548-76aa1870c058': 'photo-1655842556563-2c28adb3fcc5', // River City Youth Fitness Summer Camp
+  'a88277ac-3f06-47b9-b47f-7436f6eb6781': 'photo-1512253080918-79cf0c2e0650', // The Center for Creative Arts Summer Camps
+  'ee817d98-de2b-421d-9a45-d4f84d83867a': 'photo-1596464716127-f2a82984de30', // Hilltop Preschool Summer Camp
+  '21d62463-49a2-4d18-9eba-01ed69add4da': 'photo-1522642888367-8d98750c243c', // Cadence Summer Camps
+  'cca0cb10-bf28-4cc0-8377-0f14d92b7f5e': 'photo-1634128221889-82ed6efebfc3', // CCPS Immersion Language Camp
+  '7b101c72-e695-47fe-8932-98070d75e9d5': 'photo-1633828763399-e29f1cd3f4c1', // Camp Invention
 };
 
 // Landscape crop that suits the card (h-44), map popup (h-24) and detail hero
