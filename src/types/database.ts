@@ -6,10 +6,13 @@ export interface Camp {
   name: string
   description?: string
   location?: string
-  min_age?: number
-  max_age?: number
   website_url?: string
   image_url?: string
+  // Age range is not stored on camps — it is derived from the camp's sessions
+  // (see CampSession.min_age/max_age). day_type is a label like "Full day" /
+  // "Half day"; zipcode_id is a nullable FK to the zipcodes table.
+  day_type?: string | null
+  zipcode_id?: string | null
   latitude?: number | null
   longitude?: number | null
   created_at?: string
@@ -23,7 +26,12 @@ export interface CampSession {
   label?: string
   start_date?: string
   end_date?: string
+  start_time?: string | null
+  end_time?: string | null
+  days_of_week?: string[]
   price?: number
+  min_age?: number
+  max_age?: number
   capacity?: number
   created_at?: string
   updated_at?: string
