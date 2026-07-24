@@ -273,4 +273,27 @@ INSERT INTO public.camp_interest_links (camp_id, camp_interest_id) VALUES
 -- Camp Invention: STEM
 ('7b101c72-e695-47fe-8932-98070d75e9d5', '51a65b5e-11e4-4321-915b-8c628a9cc5e4');
 
+-- ====================== SELF-HOSTED PHOTOS ======================
+-- Self-hosted photos: each camp's card/detail/map image is a curated photo
+-- downloaded from Unsplash and uploaded to the Supabase `camps_images` bucket
+-- (path <id>.jpg), so ad/privacy blockers that match images.unsplash.com don't
+-- hide them. campInterestImage.ts returns null for these ids so the UI serves
+-- image_url below. Bucket objects are uploaded out-of-band (see the upload
+-- workflow); this UPDATE only records the public URLs.
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/d175543b-2064-49ef-b12c-885a046f98a5.jpg' WHERE id='d175543b-2064-49ef-b12c-885a046f98a5'; -- Cub Scout Day Camp at Deep Run Park
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/400850a3-544b-4ca3-ad74-1bafab2dd0d7.jpg' WHERE id='400850a3-544b-4ca3-ad74-1bafab2dd0d7'; -- Henrico Education Foundation Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/2f41f59b-7653-42bc-8a26-2e76401ee451.jpg' WHERE id='2f41f59b-7653-42bc-8a26-2e76401ee451'; -- Passion Academy Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/cdd5ff9d-6630-4f55-b554-b7a525ecde34.jpg' WHERE id='cdd5ff9d-6630-4f55-b554-b7a525ecde34'; -- Tall Cedars Farm Equestrian Day Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/5725c5ec-9f3f-4d3e-b8ee-4fa9510953de.jpg' WHERE id='5725c5ec-9f3f-4d3e-b8ee-4fa9510953de'; -- Children's Art Classes Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/18722a46-7989-49c0-a478-a0e159091006.jpg' WHERE id='18722a46-7989-49c0-a478-a0e159091006'; -- Let's Grow, Henrico! Summer Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/69d3a631-3b80-448b-901e-aa0780145783.jpg' WHERE id='69d3a631-3b80-448b-901e-aa0780145783'; -- Jacob's Chance Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/83a5c64c-8c71-4a42-874b-b5cba5a607e3.jpg' WHERE id='83a5c64c-8c71-4a42-874b-b5cba5a607e3'; -- Summer Saints Day Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/5069e503-1ff4-41a8-8297-62ae98294e41.jpg' WHERE id='5069e503-1ff4-41a8-8297-62ae98294e41'; -- Soccer Shots Richmond
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/aa28de69-e922-4807-9548-76aa1870c058.jpg' WHERE id='aa28de69-e922-4807-9548-76aa1870c058'; -- River City Youth Fitness Summer Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/a88277ac-3f06-47b9-b47f-7436f6eb6781.jpg' WHERE id='a88277ac-3f06-47b9-b47f-7436f6eb6781'; -- The Center for Creative Arts Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/ee817d98-de2b-421d-9a45-d4f84d83867a.jpg' WHERE id='ee817d98-de2b-421d-9a45-d4f84d83867a'; -- Hilltop Preschool Summer Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/21d62463-49a2-4d18-9eba-01ed69add4da.jpg' WHERE id='21d62463-49a2-4d18-9eba-01ed69add4da'; -- Cadence Summer Camps
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/cca0cb10-bf28-4cc0-8377-0f14d92b7f5e.jpg' WHERE id='cca0cb10-bf28-4cc0-8377-0f14d92b7f5e'; -- CCPS Immersion Language Camp
+UPDATE public.camps SET image_url='https://smthfqpurmomutucutwt.supabase.co/storage/v1/object/public/camps_images/7b101c72-e695-47fe-8932-98070d75e9d5.jpg' WHERE id='7b101c72-e695-47fe-8932-98070d75e9d5'; -- Camp Invention
+
 COMMIT;
