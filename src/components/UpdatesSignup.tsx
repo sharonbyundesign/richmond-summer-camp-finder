@@ -112,7 +112,7 @@ export default function UpdatesSignup({
               setEmail(e.target.value);
               if (status === 'error') setStatus('idle');
             }}
-            placeholder="you@example.com"
+            placeholder="Enter your email"
             aria-invalid={status === 'error'}
             aria-describedby={status === 'error' ? `${inputId}-msg` : undefined}
             className={
