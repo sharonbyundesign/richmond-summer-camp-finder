@@ -7,6 +7,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { METERS_PER_MILE, type LatLng } from '@/lib/v2/geo';
 import { campInterestImageUrl } from '@/lib/campInterestImage';
+import { summarizeTrust, trustBadge } from '@/lib/trust';
+import TrustBadge from '@/components/TrustBadge';
 import type { Camp, CampMarker } from '@/types/camp';
 
 const DEFAULT_CENTER: [number, number] = [37.5407, -77.436];
@@ -156,6 +158,9 @@ function PopupCard({ camp, distanceMiles }: { camp: Camp; distanceMiles?: number
   const formatDate = (time: number) =>
     new Date(time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+  // Same badge the list card shows, so a pin and its card never disagree.
+  const badge = trustBadge(summarizeTrust(camp));
+
   return (
     <div className="relative w-64">
       <button
@@ -198,6 +203,7 @@ function PopupCard({ camp, distanceMiles }: { camp: Camp; distanceMiles?: number
         </div>
 
         <div className="p-2">
+          <TrustBadge badge={badge} className="mb-1.5" />
           <h4 className="line-clamp-2 text-sm font-semibold text-gray-900">{camp.name}</h4>
 
           {typeof distanceMiles === 'number' && (
