@@ -29,9 +29,11 @@ work done since.
 | 2 | `002_camp_sources` | `camp_sources` — the pages we extract from, seeded from `camps.website_url` |
 | 3 | `003_camp_updates` | `camp_updates` staging queue + `apply_camp_update()` |
 | 4 | `004_validation_constraints` | Hard `CHECK` constraints on ages, price, dates, coordinates |
+| 5 | `005_email_signups` | `email_signups` — the January 2027 launch waitlist. Independent of 1-4. |
 
 Roll back in reverse: **004 → 003 → 002 → 001**. 003 must come down before 002
-(`camp_updates.source_id` references `camp_sources`).
+(`camp_updates.source_id` references `camp_sources`). 005 stands alone and can
+be applied or rolled back at any point.
 
 001–003 can each be applied independently, but 003 needs 002 for its foreign
 key, and the whole set is one feature — apply all four.
@@ -42,6 +44,7 @@ key, and the whole set is one feature — apply all four.
 
 | Rolling back | Loses |
 |---|---|
+| 005 | **Every signup.** Unreproducible — export the table first. |
 | 004 | Nothing. Drops rules, keeps data. |
 | 003 | Every pending/approved/rejected proposal and its review notes. Rows already applied live in `camps`/`camp_sessions` and are safe. |
 | 002 | Every recorded fetch outcome, content hash and crawl note. Re-running `up` re-seeds homepages only. |
