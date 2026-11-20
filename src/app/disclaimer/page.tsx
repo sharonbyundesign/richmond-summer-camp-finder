@@ -37,7 +37,7 @@ export default function DisclaimerPage() {
 
       <p>
         <strong className="font-semibold text-gray-900">Corrections.</strong> If you represent a camp and
-        would like your listing updated or removed, contact us at scoutyrva@gmail.com and
+        would like your listing updated or removed, contact us at <a href="mailto:scoutyrva@gmail.com" className="text-blue-600 hover:underline">scoutyrva@gmail.com</a> and
         we&rsquo;ll respond promptly.
       </p>
     </LegalPage>

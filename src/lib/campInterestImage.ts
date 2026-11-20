@@ -155,6 +155,30 @@ const PHOTO_BY_CAMP_ID: Record<string, string> = {
   '3ba98e8c-6271-4101-a7d9-e6b80d67d8a9': 'photo-1667384439505-b2a5a1486dfe', // Young Performers Institute
 };
 
+// Camps whose curated photo is self-hosted in the Supabase `camps_images` bucket
+// (their DB image_url holds the public URL). We return null for these so callers
+// fall through to `?? camp.image_url` and serve the bucket copy — hotlinking
+// images.unsplash.com through /_next/image gets hidden by ad/privacy blockers
+// that match "unsplash" in the request, so these 15 (added 2026-07-24) were
+// downloaded from Unsplash and uploaded to the bucket. See camp-image-upload-workflow.
+const SELF_HOSTED_PHOTO_CAMP_IDS = new Set([
+  'd175543b-2064-49ef-b12c-885a046f98a5', // Cub Scout Day Camp at Deep Run Park
+  '400850a3-544b-4ca3-ad74-1bafab2dd0d7', // Henrico Education Foundation Summer Camps
+  '2f41f59b-7653-42bc-8a26-2e76401ee451', // Passion Academy Summer Camps
+  'cdd5ff9d-6630-4f55-b554-b7a525ecde34', // Tall Cedars Farm Equestrian Day Camp
+  '5725c5ec-9f3f-4d3e-b8ee-4fa9510953de', // Children's Art Classes Summer Camps
+  '18722a46-7989-49c0-a478-a0e159091006', // Let's Grow, Henrico! Summer Camp
+  '69d3a631-3b80-448b-901e-aa0780145783', // Jacob's Chance Summer Camps
+  '83a5c64c-8c71-4a42-874b-b5cba5a607e3', // Summer Saints Day Camp
+  '5069e503-1ff4-41a8-8297-62ae98294e41', // Soccer Shots Richmond
+  'aa28de69-e922-4807-9548-76aa1870c058', // River City Youth Fitness Summer Camp
+  'a88277ac-3f06-47b9-b47f-7436f6eb6781', // The Center for Creative Arts Summer Camps
+  'ee817d98-de2b-421d-9a45-d4f84d83867a', // Hilltop Preschool Summer Camp
+  '21d62463-49a2-4d18-9eba-01ed69add4da', // Cadence Summer Camps
+  'cca0cb10-bf28-4cc0-8377-0f14d92b7f5e', // CCPS Immersion Language Camp
+  '7b101c72-e695-47fe-8932-98070d75e9d5', // Camp Invention
+]);
+
 // Landscape crop that suits the card (h-44), map popup (h-24) and detail hero
 // (aspect-video), all of which object-cover.
 const UNSPLASH_PARAMS = 'w=800&h=450&fit=crop&crop=faces,center&q=75&auto=format';
@@ -175,14 +199,18 @@ function hash(input: string): number {
 /**
  * Public URL of the photo for a camp. A hand-picked override wins if one exists
  * for the camp id; otherwise a photo is chosen from the camp's interest pool.
- * Returns null only when the camp has neither an override nor a recognised
- * interest (callers fall back to their placeholder). `campId` also seeds which
- * pool photo is used, so it stays stable per camp.
+ * Returns null when the camp has a self-hosted photo (so callers use its
+ * image_url), or when it has neither an override nor a recognised interest
+ * (callers fall back to their placeholder). `campId` also seeds which pool photo
+ * is used, so it stays stable per camp.
  */
 export function campInterestImageUrl(
   campId: string,
   interests?: RawInterest[],
 ): string | null {
+  // Self-hosted photo: defer to the camp's image_url (the bucket URL).
+  if (SELF_HOSTED_PHOTO_CAMP_IDS.has(campId)) return null;
+
   const override = PHOTO_BY_CAMP_ID[campId];
   if (override) return photoUrl(override);
 

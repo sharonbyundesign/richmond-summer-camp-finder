@@ -84,6 +84,10 @@ export type EventName =
   // Beta banner: engage vs. close.
   | 'beta_feedback_clicked'
   | 'beta_banner_dismissed'
+  // Email list — success only, tagged with the placement `source`.
+  | 'email_signup_completed'
+  // Beta banner's second action: did the notice itself drive signups?
+  | 'beta_signup_clicked'
   // Existing funnel.
   | 'camp_saved'
   | 'camp_unsaved'
