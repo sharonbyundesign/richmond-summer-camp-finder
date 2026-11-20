@@ -8,6 +8,9 @@ import { capture } from '@/lib/analytics';
 import { cityFromLocation, ageRange, sessionRange } from '@/lib/campCardFormat';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
 import { campInterestImageUrl } from '@/lib/campInterestImage';
+import { summarizeTrust, trustBadge } from '@/lib/trust';
+import TrustBadge from '@/components/TrustBadge';
+import type { VerificationStatus } from '@/types/database';
 
 interface CampCardProps {
   /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
@@ -24,6 +27,12 @@ interface CampCardProps {
     /** Not in the camps table yet; the reviews link falls back to a Maps search until it is. */
     place_id?: string | null;
     zipcode_id?: number;
+    // Provenance; absent until migration 001 is applied, in which case no
+    // badge renders at all.
+    source_url?: string | null;
+    season_year?: number | null;
+    last_verified_at?: string | null;
+    verification_status?: VerificationStatus;
     camp_sessions?: Array<{
       id?: string;
       name?: string;
@@ -37,6 +46,13 @@ interface CampCardProps {
       max_age?: number;
       price?: number;
       capacity?: number;
+      source_url?: string | null;
+      season_year?: number | null;
+      last_verified_at?: string | null;
+      verification_status?: VerificationStatus;
+      confidence_dates?: number | null;
+      confidence_price?: number | null;
+      confidence_ages?: number | null;
     }>;
     camp_interests?: Array<{
       id?: string;
@@ -132,6 +148,8 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
   const ages = ageRange(camp.camp_sessions);
   const dates = sessionRange(camp.camp_sessions);
   const sessionCount = camp.camp_sessions?.length ?? 0;
+  // One badge, from the weakest row behind what this card claims.
+  const badge = trustBadge(summarizeTrust(camp));
 
   const metaParts = [city, ages].filter(Boolean);
 
@@ -170,6 +188,8 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
             </svg>
           </div>
         )}
+
+        <TrustBadge badge={badge} className="absolute left-3 top-3 shadow-sm" />
 
         {tags.length > 0 && (
           <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
