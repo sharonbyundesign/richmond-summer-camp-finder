@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
+import LaunchSignup from '@/components/LaunchSignup';
 import SearchPill from '@/components/v2/SearchPill';
 import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
@@ -649,6 +650,13 @@ export default function Home() {
               <p className="mb-4 text-xs text-gray-400">
                 Camp details may change — always confirm dates and prices with the camp.
               </p>
+
+              {listed.length === 0 && unplaceable.length === 0 && (
+                <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                  <p className="text-gray-600">We&apos;re adding more camps every week.</p>
+                  <LaunchSignup source="empty-state" className="mt-4 max-w-md" />
+                </div>
+              )}
 
               <div className="grid gap-5" style={cardGridStyle}>
                 {listed.map(({ camp, distance }) => (

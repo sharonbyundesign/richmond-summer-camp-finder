@@ -44,4 +44,25 @@ body {
   }
 }
 
+/* Launch-signup modal: on phones it's a bottom sheet, so it slides up from the
+   bottom on open. Desktop centers it with a transform, so scope the slide to the
+   mobile width only to avoid fighting that. */
+@keyframes launch-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (max-width: 639px) {
+  dialog[data-launch-sheet][open] {
+    animation: launch-sheet-in 0.2s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[data-launch-sheet][open] {
+    animation: none;
+  }
+}
+
 

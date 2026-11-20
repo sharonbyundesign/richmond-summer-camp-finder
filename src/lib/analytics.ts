@@ -81,6 +81,8 @@ export type EventName =
   // Beta banner: engage vs. close.
   | 'beta_feedback_clicked'
   | 'beta_banner_dismissed'
+  // January 2027 launch waitlist — success only, tagged with the placement `source`.
+  | 'launch_signup_completed'
   // Existing funnel.
   | 'camp_saved'
   | 'camp_unsaved'

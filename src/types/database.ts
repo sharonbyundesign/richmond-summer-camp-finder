@@ -45,6 +45,13 @@ export interface CampInterest {
   created_at?: string
 }
 
+export interface EmailSignup {
+  id: string
+  email: string
+  source?: string | null
+  created_at?: string
+}
+
 // Database type for Supabase
 export type Database = {
   public: {
@@ -63,6 +70,11 @@ export type Database = {
         Row: CampInterest
         Insert: Omit<CampInterest, 'id' | 'created_at'>
         Update: Partial<Omit<CampInterest, 'id' | 'created_at'>>
+      }
+      email_signups: {
+        Row: EmailSignup
+        Insert: Omit<EmailSignup, 'id' | 'created_at'>
+        Update: Partial<Omit<EmailSignup, 'id' | 'created_at'>>
       }
     }
   }
