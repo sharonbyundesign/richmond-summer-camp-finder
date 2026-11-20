@@ -62,6 +62,7 @@ export default function ReviewClient() {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
+  const [warnings, setWarnings] = useState<Array<{ row: number; issues: Array<{ field: string; message: string }> }>>([]);
 
   useEffect(() => {
     try {
@@ -88,6 +89,7 @@ export default function ReviewClient() {
     setMessage(null);
     setDrafts([{ ...EMPTY_DRAFT }]);
     setNote('');
+    setWarnings([]);
     fetch(`/api/review/camps/${selected}`)
       .then((r) => r.json())
       .then(setDetail)
@@ -104,10 +106,13 @@ export default function ReviewClient() {
     [reviewer, drafts, saving],
   );
 
-  const setDraft = (i: number, patch: Partial<Draft>) =>
+  const setDraft = (i: number, patch: Partial<Draft>) => {
+    // Any edit invalidates an acknowledgement for the old values.
+    setWarnings([]);
     setDrafts((rows) => rows.map((row, n) => (n === i ? { ...row, ...patch } : row)));
+  };
 
-  const save = async () => {
+  const save = async (acknowledgeWarnings = false) => {
     setSaving(true);
     setMessage(null);
     try {
@@ -120,6 +125,7 @@ export default function ReviewClient() {
       camp_id: selected,
       reviewed_by: reviewer.trim(),
       review_note: note,
+      acknowledge_warnings: acknowledgeWarnings,
       source_id: detail?.sources?.[0]?.id ?? null,
       sessions: drafts
         .filter((d) => d.start_date && d.end_date)
@@ -141,6 +147,12 @@ export default function ReviewClient() {
     const data = await response.json();
     setSaving(false);
 
+    if (response.status === 409) {
+      setWarnings(data.warnings ?? []);
+      setMessage({ tone: 'bad', text: data.error });
+      return;
+    }
+
     if (!response.ok && response.status !== 207) {
       const detailText = Array.isArray(data.issues)
         ? data.issues
@@ -160,6 +172,7 @@ export default function ReviewClient() {
       }`,
     });
 
+    setWarnings([]);
     if (data.applied > 0) {
       setDrafts([{ ...EMPTY_DRAFT }]);
       loadQueue();
@@ -357,7 +370,7 @@ export default function ReviewClient() {
                 </div>
 
                 <button
-                  onClick={save}
+                  onClick={() => save(false)}
                   disabled={!canSave}
                   className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -368,6 +381,31 @@ export default function ReviewClient() {
                   <p className={`mt-3 text-sm ${message.tone === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
                     {message.text}
                   </p>
+                )}
+
+                {warnings.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm font-medium text-amber-900">
+                      These look unusual. They are allowed — a camp really can run a week
+                      outside the normal summer window — but check them before publishing,
+                      because this goes live as verified under your name.
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-amber-900">
+                      {warnings.map((w) => (
+                        <li key={w.row}>
+                          <span className="font-medium">Row {w.row}:</span>{' '}
+                          {w.issues.map((i) => i.message).join('; ')}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      onClick={() => save(true)}
+                      disabled={saving}
+                      className="mt-3 rounded-md border border-amber-400 bg-white px-3 py-1.5 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                    >
+                      I checked these — publish anyway
+                    </button>
+                  </div>
                 )}
               </div>
             </>

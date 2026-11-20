@@ -55,6 +55,7 @@ export async function POST(request: Request) {
   const reviewedBy = typeof body?.reviewed_by === 'string' ? body.reviewed_by.trim() : '';
   const sourceId = typeof body?.source_id === 'string' && body.source_id ? body.source_id : null;
   const note = typeof body?.review_note === 'string' ? body.review_note.trim() || null : null;
+  const acknowledged = body?.acknowledge_warnings === true;
   const drafts: Draft[] = Array.isArray(body?.sessions) ? body.sessions : [];
 
   if (!campId) return NextResponse.json({ error: 'camp_id is required' }, { status: 400 });
@@ -100,6 +101,26 @@ export async function POST(request: Request) {
     );
   }
 
+  // Warnings do not make a row invalid — a camp really can run a late-September
+  // week, and the validator is deliberately lenient so the one unusual-but-true
+  // camp is not rejected. But publishing a warned row straight through as
+  // `human_checked` means a mistyped month ships as verified data. So they stop
+  // here once, get shown, and go through only when the reviewer says so.
+  const warned = prepared
+    .map((p) => ({ row: p.index + 1, issues: p.result.issues.filter((i) => i.severity === 'warning') }))
+    .filter((p) => p.issues.length > 0);
+
+  if (warned.length && !acknowledged) {
+    return NextResponse.json(
+      {
+        error: 'Nothing was saved — check these, then publish again to confirm',
+        needs_acknowledgement: true,
+        warnings: warned,
+      },
+      { status: 409 },
+    );
+  }
+
   const results: Array<{ row: number; outcome: string; update_id?: string; error?: string }> = [];
 
   for (const { index, proposed, result } of prepared) {
@@ -116,7 +137,12 @@ export async function POST(request: Request) {
         status: 'approved',
         reviewed_at: new Date().toISOString(),
         reviewed_by: reviewedBy,
-        review_note: note,
+        review_note: [
+          note,
+          warned.length ? `warnings acknowledged by ${reviewedBy}` : null,
+        ]
+          .filter(Boolean)
+          .join(' | ') || null,
         extractor: 'manual-review',
       } as never)
       .select('id')
