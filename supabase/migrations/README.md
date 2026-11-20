@@ -29,7 +29,7 @@ work done since.
 | 2 | `002_camp_sources` | `camp_sources` — the pages we extract from, seeded from `camps.website_url` |
 | 3 | `003_camp_updates` | `camp_updates` staging queue + `apply_camp_update()` |
 | 4 | `004_validation_constraints` | Hard `CHECK` constraints on ages, price, dates, coordinates |
-| 5 | `005_email_signups` | `email_signups` — the January 2027 launch waitlist. Independent of 1-4. |
+| 5 | `005_email_signups` | `email_signups` — the camp-updates email list. Independent of 1-4. |
 
 Roll back in reverse: **004 → 003 → 002 → 001**. 003 must come down before 002
 (`camp_updates.source_id` references `camp_sources`). 005 stands alone and can

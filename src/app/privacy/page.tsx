@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
       <p>
         You can block analytics using browser settings or extensions that limit tracking, and the site
         will continue to work. If you have questions about your data or would like it deleted, contact us
-        at scoutyrva@gmail.com and we will make reasonable efforts to identify
+        at <a href="mailto:scoutyrva@gmail.com" className="text-blue-600 hover:underline">scoutyrva@gmail.com</a> and we will make reasonable efforts to identify
         and remove it.
       </p>
 
@@ -72,7 +72,7 @@ export default function PrivacyPolicyPage() {
       <p>
         Scouty is intended for use by parents and guardians, not by children. We do not knowingly collect
         personal information from children under 13. If you believe a child has provided us personal
-        information, contact us at scoutyrva@gmail.com.
+        information, contact us at <a href="mailto:scoutyrva@gmail.com" className="text-blue-600 hover:underline">scoutyrva@gmail.com</a>.
       </p>
 
       <LegalHeading>Changes to this policy</LegalHeading>
@@ -82,7 +82,7 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <LegalHeading>Contact</LegalHeading>
-      <p>Questions? Email us at scoutyrva@gmail.com.</p>
+      <p>Questions? Email us at <a href="mailto:scoutyrva@gmail.com" className="text-blue-600 hover:underline">scoutyrva@gmail.com</a>.</p>
     </LegalPage>
   );
 }

@@ -1,4 +1,4 @@
--- 005 · Launch waitlist.
+-- 005 · Email updates list.
 --
 -- Requires: nothing. Independent of 001-004.
 -- HOW TO RUN: paste the whole file into the Supabase SQL Editor and press Run
@@ -19,9 +19,10 @@ CREATE TABLE IF NOT EXISTS public.email_signups (
 );
 
 COMMENT ON TABLE public.email_signups IS
-  'January 2027 full-launch waitlist. Personal data: service-role access only.';
+  'Email list for occasional camp updates. No cadence is promised to '
+  'subscribers. Personal data: service-role access only.';
 COMMENT ON COLUMN public.email_signups.source IS
-  'Where the person signed up: the placement id passed by LaunchSignup '
+  'Where the person signed up: the placement id passed by UpdatesSignup '
   '(e.g. ''footer'', ''empty-state''). Null if the caller omitted it.';
 
 -- Case-insensitive uniqueness: one row per address whatever the casing.

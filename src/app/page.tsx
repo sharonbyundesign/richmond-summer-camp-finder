@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
-import LaunchSignup from '@/components/LaunchSignup';
+import UpdatesSignup from '@/components/UpdatesSignup';
 import SearchPill from '@/components/v2/SearchPill';
 import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
@@ -654,7 +654,7 @@ export default function Home() {
               {listed.length === 0 && unplaceable.length === 0 && (
                 <div className="rounded-2xl border border-gray-200 bg-white p-6">
                   <p className="text-gray-600">We&apos;re adding more camps every week.</p>
-                  <LaunchSignup source="empty-state" className="mt-4 max-w-md" />
+                  <UpdatesSignup source="empty-state" className="mt-4 max-w-md" />
                 </div>
               )}
 
@@ -763,10 +763,14 @@ export default function Home() {
               setMobileMapOpen(next);
               capture('mobile_map_toggled', { view: next ? 'map' : 'list' });
             }}
-            /* Sits above the consent notice while that's up (it's fixed at z-[60] and
-               would otherwise cover this button on first visit), and drops back to the
-               normal 1.5rem inset once consent is dismissed. */
-            style={{ bottom: 'calc(1.5rem + var(--consent-height, 0px))' }}
+            /* Lifts clear of anything else pinned to the bottom edge: the consent
+               notice on a first visit (fixed at z-[60]), and the footer once the
+               list has been scrolled to its end. Both publish their height as a
+               CSS variable, so this is their sum plus the normal 1.5rem inset. */
+            style={{
+              bottom:
+                'calc(1.5rem + var(--consent-height, 0px) + var(--footer-visible, 0px))',
+            }}
             className="fixed left-1/2 z-50 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-[bottom] hover:bg-gray-800"
           >
             {mobileMapOpen ? (

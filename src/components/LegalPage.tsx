@@ -16,8 +16,15 @@ export default function LegalPage({
     <main className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="truncate text-lg font-semibold text-gray-900 hover:text-gray-700 sm:text-xl">
-            Richmond Summer Camp Finder
+          {/* Same wordmark treatment as the finder's own header, so the legal
+              pages read as Scouty rather than as a different site. */}
+          <Link href="/" className="flex min-w-0 items-baseline gap-2.5">
+            <span className="shrink-0 text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
+              Scouty
+            </span>
+            <span className="truncate text-sm leading-tight text-gray-500">
+              Richmond summer camp finder
+            </span>
           </Link>
           <Link href="/" className="shrink-0 text-sm font-medium text-gray-700 hover:text-gray-900">
             Back to Search

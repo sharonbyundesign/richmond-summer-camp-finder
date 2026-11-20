@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 // not to fully validate deliverability.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// POST /api/signup — add an address to the launch waitlist.
+// POST /api/signup — add an address to the camp-updates email list.
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
