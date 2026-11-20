@@ -23,6 +23,9 @@ export default function Footer() {
           fieldId={FOOTER_SIGNUP_FIELD_ID}
         />
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+          {/* Rendered at build time, so it moves on with each deploy rather
+              than freezing on the year this was written. */}
+          <span className="whitespace-nowrap">&copy; {new Date().getFullYear()} Scouty</span>
           <Link href="/privacy" className="hover:text-gray-700">
             Privacy Policy
           </Link>

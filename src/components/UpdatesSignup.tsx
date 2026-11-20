@@ -84,13 +84,15 @@ export default function UpdatesSignup({
           e.preventDefault();
           submit();
         }}
-        className={inline ? 'flex flex-wrap items-center gap-2' : undefined}
+        className={
+          inline ? 'flex flex-wrap items-center justify-center gap-2 lg:justify-start' : undefined
+        }
       >
         <label
           htmlFor={inputId}
           className={
             inline
-              ? 'text-sm text-gray-500'
+              ? 'sr-only lg:not-sr-only lg:text-sm lg:text-gray-500'
               : 'block text-sm font-medium text-gray-700'
           }
         >
