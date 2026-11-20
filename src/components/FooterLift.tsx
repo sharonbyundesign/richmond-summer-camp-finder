@@ -13,8 +13,8 @@ const FOOTER_VISIBLE_VAR = '--footer-visible';
  * Measures how far the footer intrudes into the viewport and writes it to the
  * variable above. Rendered inside <Footer>, which stays a server component.
  *
- * It has to be measured on scroll rather than derived from the footer's height:
- * the footer is only sticky from md up, so on phones it slides into view a few
+ * It has to be measured rather than derived from the footer's height: the
+ * footer is only sticky from md up, so on phones it slides into view a few
  * pixels at a time and the toggle should rise with it, not jump.
  */
 export default function FooterLift() {
@@ -42,14 +42,23 @@ export default function FooterLift() {
     };
 
     measure();
-    window.addEventListener('scroll', schedule, { passive: true });
+
+    // Capture phase, not the window's own scroll: below the desktop breakpoint
+    // the results list scrolls inside a container, and a scroll event on an
+    // element does not bubble — a listener bound to window never hears it.
+    // Capturing from window catches scrolls from any scroller on the page.
+    window.addEventListener('scroll', schedule, { capture: true, passive: true });
     window.addEventListener('resize', schedule);
+
+    // Backstop for movement no scroll reports: the footer reflowing, the list
+    // growing as camps load, the consent notice being dismissed.
     const observer = new ResizeObserver(schedule);
     observer.observe(footer);
+    observer.observe(document.documentElement);
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('scroll', schedule, { capture: true });
       window.removeEventListener('resize', schedule);
       observer.disconnect();
       root.style.removeProperty(FOOTER_VISIBLE_VAR);
