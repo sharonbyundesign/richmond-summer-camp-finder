@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { filterCamps, parseFiltersFromParams } from '@/lib/campFilters';
 import { zipToLatLng } from '@/lib/richmondZips';
+import {
+  campListSelect,
+  isMissingColumnError,
+  recordTrustColumnsPresent,
+  trustColumnsAssumedPresent,
+} from '@/lib/campQuery';
+import type { VerificationStatus } from '@/types/database';
 
 // Force dynamic rendering since we use request.url for query parameters
 export const dynamic = 'force-dynamic';
@@ -10,7 +17,10 @@ export const dynamic = 'force-dynamic';
 // in Supabase must be reflected immediately.
 export const fetchCache = 'force-no-store';
 
-// Type for the camp query result with relations
+type SupabaseServerClient = NonNullable<ReturnType<typeof getSupabaseServerClient>>;
+
+// Type for the camp query result with relations. The trust fields are optional
+// because they are absent until migration 001 is applied — see campQuery.ts.
 type CampWithRelations = {
   id: string;
   name: string;
@@ -22,6 +32,10 @@ type CampWithRelations = {
   longitude?: number | null;
   day_type?: string | null;
   zipcode_id?: number;
+  source_url?: string | null;
+  season_year?: number | null;
+  last_verified_at?: string | null;
+  verification_status?: VerificationStatus;
   camp_sessions?: Array<{
     id?: string;
     name?: string;
@@ -35,6 +49,13 @@ type CampWithRelations = {
     max_age?: number;
     price?: number;
     capacity?: number;
+    source_url?: string | null;
+    season_year?: number | null;
+    last_verified_at?: string | null;
+    verification_status?: VerificationStatus;
+    confidence_dates?: number | null;
+    confidence_price?: number | null;
+    confidence_ages?: number | null;
   }>;
   camp_interests?: Array<{
     id?: string;
@@ -42,6 +63,35 @@ type CampWithRelations = {
     interest_name?: string;
   }>;
 };
+
+/**
+ * Camps with their sessions and interests, asking for provenance when the
+ * database has it. A database without the trust columns serves the same camps
+ * minus the badges rather than failing the request.
+ */
+async function fetchCamps(supabase: SupabaseServerClient) {
+  const run = (withTrust: boolean) =>
+    supabase.from('camps').select(campListSelect(withTrust)).order('name', { ascending: true });
+
+  const wantTrust = trustColumnsAssumedPresent();
+  const first = await run(wantTrust);
+
+  if (!first.error) {
+    if (wantTrust) recordTrustColumnsPresent(true);
+    return { camps: (first.data as unknown as CampWithRelations[] | null) ?? [], error: null };
+  }
+
+  if (wantTrust && isMissingColumnError(first.error)) {
+    recordTrustColumnsPresent(false);
+    const retry = await run(false);
+    return {
+      camps: (retry.data as unknown as CampWithRelations[] | null) ?? [],
+      error: retry.error,
+    };
+  }
+
+  return { camps: [] as CampWithRelations[], error: first.error };
+}
 
 export async function GET(request: Request) {
   try {
@@ -61,41 +111,7 @@ export async function GET(request: Request) {
     const countOnly = searchParams.get('count') === '1';
     const filters = parseFiltersFromParams(searchParams);
 
-    // Query Supabase: camps with related sessions and interests (through join table)
-    const { data, error } = await supabase
-      .from('camps')
-      .select(`
-        id,
-        name,
-        location,
-        description,
-        website_url,
-        image_url,
-        latitude,
-        longitude,
-        day_type,
-        zipcode_id,
-        camp_sessions(
-          id,
-          name,
-          label,
-          start_date,
-          end_date,
-          start_time,
-          end_time,
-          days_of_week,
-          min_age,
-          max_age,
-          price,
-          capacity
-        ),
-        camp_interests(
-          id,
-          tag,
-          interest_name
-        )
-      `)
-      .order('name', { ascending: true });
+    const { camps, error } = await fetchCamps(supabase);
 
     if (error) {
       console.error('Supabase error:', error);
@@ -113,8 +129,6 @@ export async function GET(request: Request) {
 
       return NextResponse.json({ error: errorMessage, camps: [] }, { status: 500 });
     }
-
-    const camps = (data as CampWithRelations[] | null) || [];
 
     // Resolve the distance origin (if a recognized ZIP was entered) and apply
     // all filters through the shared logic used by both count and results.

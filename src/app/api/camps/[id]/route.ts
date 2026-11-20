@@ -1,10 +1,43 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import {
+  campDetailSelect,
+  isMissingColumnError,
+  recordTrustColumnsPresent,
+  trustColumnsAssumedPresent,
+} from '@/lib/campQuery';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 // Never serve a cached Supabase response so DB changes show up immediately.
 export const fetchCache = 'force-no-store';
+
+type SupabaseServerClient = NonNullable<ReturnType<typeof getSupabaseServerClient>>;
+
+/**
+ * One camp with its sessions, interests and provenance. As in the list route,
+ * a database that has not had migration 001 applied yet serves the camp
+ * without the trust columns instead of failing.
+ */
+async function fetchCamp(supabase: SupabaseServerClient, campId: string) {
+  const run = (withTrust: boolean) =>
+    supabase.from('camps').select(campDetailSelect(withTrust)).eq('id', campId).single();
+
+  const wantTrust = trustColumnsAssumedPresent();
+  const first = await run(wantTrust);
+
+  if (!first.error) {
+    if (wantTrust) recordTrustColumnsPresent(true);
+    return first;
+  }
+
+  if (wantTrust && isMissingColumnError(first.error)) {
+    recordTrustColumnsPresent(false);
+    return run(false);
+  }
+
+  return first;
+}
 
 export async function GET(
   request: Request,
@@ -25,58 +58,19 @@ export async function GET(
 
     const { id: campId } = await params;
 
-    // Query Supabase: single camp with all related sessions and interests
-    const { data, error } = await supabase
-      .from('camps')
-      .select(`
-        id,
-        name,
-        location,
-        description,
-        website_url,
-        image_url,
-        latitude,
-        longitude,
-        day_type,
-        zipcode_id,
-        created_at,
-        updated_at,
-        camp_sessions(
-          id,
-          name,
-          label,
-          start_date,
-          end_date,
-          start_time,
-          end_time,
-          days_of_week,
-          min_age,
-          max_age,
-          price,
-          capacity,
-          created_at,
-          updated_at
-        ),
-        camp_interests(
-          id,
-          tag,
-          interest_name
-        )
-      `)
-      .eq('id', campId)
-      .single();
+    const { data, error } = await fetchCamp(supabase, campId);
 
     // Handle Supabase errors
     if (error) {
       console.error('Supabase error:', error);
-      
+
       if (error.code === 'PGRST116') {
         return NextResponse.json(
           { error: 'Camp not found' },
           { status: 404 }
         );
       }
-      
+
       return NextResponse.json(
         { error: 'Unable to load camp details' },
         { status: 500 }
@@ -101,4 +95,3 @@ export async function GET(
     );
   }
 }
-

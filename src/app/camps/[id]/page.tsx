@@ -9,6 +9,16 @@ import { campInterestImageUrl } from '@/lib/campInterestImage';
 import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { feedbackMailto } from '@/lib/contact';
+import {
+  formatCheckedAt,
+  formatFieldList,
+  lowConfidenceFields,
+  provenanceSentence,
+  summarizeTrust,
+  trustBadge,
+} from '@/lib/trust';
+import TrustBadge from '@/components/TrustBadge';
+import type { VerificationStatus } from '@/types/database';
 
 interface CampSession {
   id?: string;
@@ -23,6 +33,14 @@ interface CampSession {
   max_age?: number;
   price?: number;
   capacity?: number;
+  // Provenance (migration 001); absent until that migration is applied.
+  source_url?: string | null;
+  season_year?: number | null;
+  last_verified_at?: string | null;
+  verification_status?: VerificationStatus;
+  confidence_dates?: number | null;
+  confidence_price?: number | null;
+  confidence_ages?: number | null;
 }
 
 interface CampInterest {
@@ -43,6 +61,10 @@ interface Camp {
   zipcode_id?: number;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
+  source_url?: string | null;
+  season_year?: number | null;
+  last_verified_at?: string | null;
+  verification_status?: VerificationStatus;
 }
 
 type SessionStatus = 'past' | 'in-progress' | 'upcoming';
@@ -207,6 +229,9 @@ export default function CampDetailPage() {
     sortedSessions.length > 0 && sortedSessions.every((s) => getSessionStatus(s, todayNY) === 'past');
   const mostRecentSessionYear = allSessionsPast ? dateOnly(sortedSessions[0].end_date).slice(0, 4) : null;
 
+  const trust = summarizeTrust(camp);
+  const badge = trustBadge(trust);
+
   const reportUrl = feedbackMailto(`Incorrect info: ${camp.name}`);
 
   return (
@@ -258,7 +283,10 @@ export default function CampDetailPage() {
 
             {/* Camp Info — stacked, right side */}
             <div className="flex-1 p-6 flex flex-col">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{camp.name}</h1>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900">{camp.name}</h1>
+                <TrustBadge badge={badge} />
+              </div>
 
               {camp.location && (
                 <p className="text-gray-600 mb-4 flex items-center gap-2">
@@ -331,6 +359,51 @@ export default function CampDetailPage() {
             <p className="mb-4 text-sm text-gray-600">
               All {mostRecentSessionYear} sessions have ended.
             </p>
+          )}
+
+          {/* Where these sessions came from and how far to trust them. This sits
+              directly above the data it describes rather than in a footer. */}
+          {trust.known && (
+            <div
+              className={`mb-6 rounded-lg border p-4 ${
+                trust.isStale ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <p className="text-sm text-gray-800">{provenanceSentence(trust)}</p>
+
+              {trust.lowConfidenceFields.length > 0 && (
+                <p className="mt-2 text-sm text-gray-800">
+                  Read the {formatFieldList(trust.lowConfidenceFields)} below as approximate — the
+                  camp&apos;s own listing was not clear enough for us to be sure.
+                </p>
+              )}
+
+              {trust.sourceUrl && (
+                <a
+                  href={trust.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() =>
+                    capture('camp_source_clicked', {
+                      camp_id: camp.id,
+                      camp_name: camp.name,
+                      url: trust.sourceUrl,
+                    })
+                  }
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
+                >
+                  See the page this came from
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                </a>
+              )}
+            </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
               {sortedSessions.map((session, idx) => {
@@ -489,6 +562,41 @@ export default function CampDetailPage() {
                           </div>
                         )}
                       </div>
+
+                      {/* Per-session provenance. A camp can have one week
+                          confirmed and the next five guessed, so this is per
+                          session rather than rolled up into the camp badge. */}
+                      {(() => {
+                        if (session.verification_status === undefined) return null;
+
+                        const low = lowConfidenceFields(session);
+                        const checkedAt = formatCheckedAt(session.last_verified_at ?? null);
+
+                        if (low.length > 0) {
+                          return (
+                            <p className="mt-4 text-xs text-amber-800 first-letter:uppercase">
+                              {formatFieldList(low)} unconfirmed — check with the camp before you
+                              register.
+                            </p>
+                          );
+                        }
+
+                        if (session.verification_status === 'camp_confirmed') {
+                          return (
+                            <p className="mt-4 text-xs text-green-700">
+                              Confirmed by the camp{checkedAt ? ` in ${checkedAt}` : ''}.
+                            </p>
+                          );
+                        }
+
+                        if (session.verification_status === 'human_checked' && checkedAt) {
+                          return (
+                            <p className="mt-4 text-xs text-gray-500">Checked {checkedAt}.</p>
+                          );
+                        }
+
+                        return null;
+                      })()}
                       </div>
                     </div>
                   </div>

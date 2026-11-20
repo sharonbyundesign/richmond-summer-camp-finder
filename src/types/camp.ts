@@ -1,3 +1,5 @@
+import type { VerificationStatus } from '@/types/database';
+
 export interface CampSession {
   id?: string;
   name?: string;
@@ -11,6 +13,17 @@ export interface CampSession {
   max_age?: number;
   price?: number;
   capacity?: number;
+  // Provenance (migration 001). Every one of these is optional on purpose:
+  // the API omits them entirely until the migration is applied, and an absent
+  // field is a different claim from an unverified one. See src/lib/trust.ts.
+  source_url?: string | null;
+  season_year?: number | null;
+  last_verified_at?: string | null;
+  verification_status?: VerificationStatus;
+  /** 0–1, or null when the field has never been scored. */
+  confidence_dates?: number | null;
+  confidence_price?: number | null;
+  confidence_ages?: number | null;
 }
 
 export interface CampInterest {
@@ -41,6 +54,11 @@ export interface Camp {
   zipcode?: CampZipcode | null;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
+  /** Provenance for the camp row itself; sessions carry their own. */
+  source_url?: string | null;
+  season_year?: number | null;
+  last_verified_at?: string | null;
+  verification_status?: VerificationStatus;
 }
 
 export interface CampMarker {
