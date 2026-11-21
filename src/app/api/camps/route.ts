@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import { filterCamps, parseFiltersFromParams } from '@/lib/campFilters';
+import { filterCamps, parseFiltersFromParams, undatedCamps } from '@/lib/campFilters';
 import { zipToLatLng } from '@/lib/richmondZips';
 import {
   campListSelect,
@@ -139,7 +139,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ count: filtered.length });
     }
 
-    return NextResponse.json({ camps: filtered });
+    // Camps we hold no sessions for, narrowed by the filters that do not need
+    // them. Returned alongside rather than mixed in: every session-level
+    // filter excludes them by construction, so without this they disappear
+    // from the results with no explanation — and that is most of the
+    // catalogue. The client decides when to show them.
+    const undated = undatedCamps(camps, filters, origin);
+
+    return NextResponse.json({ camps: filtered, undated });
   } catch (err) {
     console.error('Unexpected error in camps API:', err);
     return NextResponse.json(

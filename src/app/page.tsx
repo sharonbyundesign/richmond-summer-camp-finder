@@ -136,6 +136,8 @@ export default function Home() {
   }, [filtersHydrated, setFilters]);
 
   const [camps, setCamps] = useState<Camp[]>([]);
+  /** Camps with no sessions at all, returned separately by the API. */
+  const [undated, setUndated] = useState<Camp[]>([]);
   const [allCamps, setAllCamps] = useState<Camp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -231,6 +233,7 @@ export default function Home() {
         const errorData = await response.json().catch(() => ({}));
         setError(errorData.error || 'Unable to load camps. Please try again later.');
         setCamps([]);
+        setUndated([]);
         return;
       }
 
@@ -239,13 +242,16 @@ export default function Home() {
       if (data.error) {
         setError(data.error);
         setCamps([]);
+        setUndated([]);
       } else {
         setCamps(Array.isArray(data.camps) ? data.camps : []);
+        setUndated(Array.isArray(data.undated) ? data.undated : []);
       }
     } catch (err) {
       console.error('Error fetching camps from Supabase:', err);
       setError('Unable to connect to the database. Please check your connection and try again.');
       setCamps([]);
+      setUndated([]);
     } finally {
       setLoading(false);
     }
@@ -333,6 +339,37 @@ export default function Home() {
       outOfRadius: decorated.filter((d) => d.distance !== null && d.distance > pill.radius),
     };
   }, [decorated, radiusActive, pill.radius, sortCamps]);
+
+  /**
+   * Undated camps to surface below the results.
+   *
+   * Every session-level filter — age, week, session type, price — excludes a
+   * camp with no sessions by construction, so the moment a parent touches the
+   * pill, 70 of 108 camps vanish with nothing said. We cannot claim these run
+   * in the chosen week; we also cannot claim they do not, and dropping them
+   * silently makes Richmond look emptier than it is.
+   *
+   * Shown only when such a filter is active: with none set they are already in
+   * the list above, and repeating them would be noise.
+   */
+  const showUndated =
+    pill.ages.length > 0 ||
+    selectedWeeks.length > 0 ||
+    filters.sessionTypes.length > 0 ||
+    filters.priceBrackets.length > 0;
+
+  const undatedListed = useMemo(() => {
+    if (!showUndated) return [];
+    // The zip radius is applied on the client, so it has to be repeated here;
+    // a camp we cannot place is left out rather than guessed at.
+    const inRange = radiusActive
+      ? undated.filter((camp) => {
+          const coords = campCoord(camp);
+          return coords !== null && haversineMiles(zipCenter!, coords) <= pill.radius;
+        })
+      : undated;
+    return [...inRange].sort((a, b) => a.name.localeCompare(b.name));
+  }, [undated, showUndated, radiusActive, zipCenter, pill.radius]);
 
   /** How many of the shown camps serve every selected age, not just one of them. */
   const fitsAllCount = useMemo(
@@ -683,6 +720,28 @@ export default function Home() {
 
                   <div className="grid gap-5" style={cardGridStyle}>
                     {unplaceable.map(({ camp }) => (
+                      <CampCard key={camp.id} camp={camp} distanceMiles={null} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {undatedListed.length > 0 && (
+                <div className="mt-8">
+                  <div className="mb-3 border-t border-gray-200 pt-6">
+                    <h2 className="text-sm font-semibold text-gray-900">
+                      {undatedListed.length} more camp{undatedListed.length === 1 ? '' : 's'} we
+                      don&apos;t have dates for yet
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      These may still suit your search — we just can&apos;t say which weeks they run
+                      or what ages they take, so they can&apos;t be matched against your filters.
+                      We&apos;re confirming their schedules with the camps.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-5" style={cardGridStyle}>
+                    {undatedListed.map((camp) => (
                       <CampCard key={camp.id} camp={camp} distanceMiles={null} />
                     ))}
                   </div>
