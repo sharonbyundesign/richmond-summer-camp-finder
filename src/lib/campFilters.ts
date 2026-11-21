@@ -238,37 +238,73 @@ function campMatchesAges(camp: CampLike, ages: number[], matchAll: boolean): boo
 // Main filter
 // ---------------------------------------------------------------------------
 
+/**
+ * True when at least one active filter can only be answered by a camp's
+ * sessions. A camp with no sessions can never satisfy one of these, so when
+ * any is set the results silently lose every undated camp — which is most of
+ * the catalogue. `undatedCamps` below recovers them for separate display.
+ */
+export function hasSessionLevelFilters(filters: Filters): boolean {
+  return (
+    filters.ages.length > 0 ||
+    filters.weeks.length > 0 ||
+    filters.sessionTypes.length > 0 ||
+    filters.priceBrackets.length > 0
+  );
+}
+
+/** The checks that need nothing but the camp row itself. */
+function matchesCampLevel(camp: CampLike, filters: Filters, origin: LatLng | null): boolean {
+  const { interests, radius } = filters;
+
+  if (interests.length > 0) {
+    const selected = new Set(interests.map((i) => normalizeInterest(i) ?? i));
+    const campCategories = toCategories(
+      (camp.camp_interests || []).map((ci) => ci?.tag || ci?.interest_name),
+    );
+    if (!campCategories.some((cat) => selected.has(cat))) return false;
+  }
+
+  if (origin && radius > 0) {
+    if (camp.latitude === null || camp.latitude === undefined) return false;
+    if (camp.longitude === null || camp.longitude === undefined) return false;
+    if (haversineMiles(origin, { lat: camp.latitude, lng: camp.longitude }) > radius) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Camps we hold no sessions for, narrowed by the filters that do not depend on
+ * sessions. These are the camps an age or week filter would otherwise delete
+ * without saying so: we cannot claim they run in the chosen week, but we also
+ * cannot claim they do not, and hiding them understates the catalogue.
+ */
+export function undatedCamps<T extends CampLike>(
+  camps: T[],
+  filters: Filters,
+  origin: LatLng | null,
+): T[] {
+  return camps.filter(
+    (camp) => (camp.camp_sessions || []).length === 0 && matchesCampLevel(camp, filters, origin),
+  );
+}
+
 export function filterCamps<T extends CampLike>(
   camps: T[],
   filters: Filters,
   origin: LatLng | null,
 ): T[] {
-  const {
-    interests,
-    ages,
-    matchAllAges,
-    weeks,
-    sessionTypes,
-    priceBrackets,
-    radius,
-  } = filters;
+  const { ages, matchAllAges, weeks, sessionTypes, priceBrackets } = filters;
 
   const weekSet = new Set(weeks);
   const typeSet = new Set(sessionTypes);
   const priceSet = new Set(priceBrackets);
-  const distanceActive = !!origin && radius > 0;
 
   return camps.filter((camp) => {
     const sessions = camp.camp_sessions || [];
 
-    // Interests (camp-level): camp has at least one selected category.
-    if (interests.length > 0) {
-      const selected = new Set(interests.map((i) => normalizeInterest(i) ?? i));
-      const campCategories = toCategories(
-        (camp.camp_interests || []).map((ci) => ci?.tag || ci?.interest_name),
-      );
-      if (!campCategories.some((cat) => selected.has(cat))) return false;
-    }
+    if (!matchesCampLevel(camp, filters, origin)) return false;
 
     // Ages (session-level).
     if (ages.length > 0 && !campMatchesAges(camp, ages, matchAllAges)) {
@@ -302,14 +338,6 @@ export function filterCamps<T extends CampLike>(
         return bracket !== null && priceSet.has(bracket);
       });
       if (!ok) return false;
-    }
-
-    // Distance (camp-level): camp must have coordinates within the radius.
-    if (distanceActive) {
-      if (camp.latitude === null || camp.latitude === undefined) return false;
-      if (camp.longitude === null || camp.longitude === undefined) return false;
-      const miles = haversineMiles(origin!, { lat: camp.latitude, lng: camp.longitude });
-      if (miles > radius) return false;
     }
 
     return true;
