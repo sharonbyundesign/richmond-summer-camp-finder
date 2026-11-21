@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
+import SavedLink from '@/components/SavedLink';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import UpdatesSignup from '@/components/UpdatesSignup';
 import SearchPill from '@/components/v2/SearchPill';
@@ -465,9 +466,7 @@ export default function Home() {
               Richmond summer camp finder
             </p>
           </div>
-          <Link href="/saved" className="shrink-0 text-sm font-medium text-gray-700 hover:text-gray-900">
-            Saved
-          </Link>
+          <SavedLink />
         </div>
       </header>
 

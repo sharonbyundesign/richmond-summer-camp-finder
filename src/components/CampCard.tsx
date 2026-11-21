@@ -131,14 +131,19 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
     setIsSaved(!isSaved);
     capture(isSaved ? 'camp_unsaved' : 'camp_saved', { camp_id: camp.id, camp_name: camp.name });
 
+    // Commit before the network call, not after. The read above and this write
+    // used to straddle the await, so saving several camps in quick succession
+    // meant each click read the list as it was before any of them had written:
+    // all but the last save were lost. Keeping the read-modify-write
+    // synchronous closes that window.
+    localStorage.setItem('savedCamps', JSON.stringify(next));
+    window.dispatchEvent(new Event('savedCampsUpdated'));
+
     try {
       await fetch(`/api/camps/${camp.id}/save`, { method: isSaved ? 'DELETE' : 'POST' });
     } catch (err) {
       console.error('Error updating saved camp:', err);
     }
-
-    localStorage.setItem('savedCamps', JSON.stringify(next));
-    window.dispatchEvent(new Event('savedCampsUpdated'));
   };
 
   // toCategories normalises and de-dupes raw tags into the canonical category set.
