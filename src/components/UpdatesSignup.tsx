@@ -9,8 +9,11 @@ interface UpdatesSignupProps {
   /** Placement identifier, stored with the signup and sent to PostHog. */
   source: string;
   /**
-   * 'inline' is the one-line footer form, which has to stay short because the
-   * footer is sticky on desktop and this sits on screen permanently.
+   * 'inline' is the one-line footer form. The field's three widths are
+   * measured, not chosen: the footer is sticky from md up, so a second line is
+   * permanent chrome, and the widest that still fits on one line is 176px at
+   * 768, 240px at 1024 (where the label appears and takes the gain back) and
+   * 288px from 1280. Re-measure at those three widths before changing it.
    * 'stacked' is the roomier version for in-page placements.
    */
   layout?: 'inline' | 'stacked';
@@ -117,7 +120,7 @@ export default function UpdatesSignup({
             aria-describedby={status === 'error' ? `${inputId}-msg` : undefined}
             className={
               inline
-                ? 'min-w-0 w-44 rounded-full border border-gray-300 px-3.5 py-1 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                ? 'min-w-0 w-44 lg:w-60 xl:w-72 rounded-full border border-gray-300 px-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
                 : 'min-w-0 flex-1 rounded-md border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
             }
           />
@@ -126,7 +129,7 @@ export default function UpdatesSignup({
             disabled={status === 'submitting'}
             className={
               inline
-                ? 'shrink-0 rounded-full bg-blue-600 px-4 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
+                ? 'shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
                 : 'shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
             }
           >
