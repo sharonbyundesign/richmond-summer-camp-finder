@@ -1,4 +1,6 @@
 import type { Camp, CampSession } from '@/types/camp';
+import { ACTIVE_SEASON_YEAR } from '@/lib/trust';
+import { summerWindow } from '@/lib/validation/campData';
 
 export interface WeekOption {
   /** Monday of the week, as YYYY-MM-DD. Stable id used in state + localStorage. */
@@ -55,22 +57,35 @@ function formatRange(start: Date, end: Date): string {
 }
 
 /**
- * Upcoming Monday-start weeks, from the week containing `today` through the week
- * containing `windowEnd`. Past weeks are omitted entirely rather than struck through:
- * the dataset carries a full prior season, so showing them would bury the bookable
- * weeks under a year of dead chips.
+ * Monday-start weeks of the season we are currently selling, from whichever is
+ * later — today or the season's start — through the season's end. Weeks that
+ * have already finished are omitted rather than struck through: the dataset
+ * carries a full prior season, and showing it would bury the bookable weeks
+ * under a year of dead chips.
  *
- * `campCount` is how many camps have a session overlapping that week, so the picker
- * can show — and dim — weeks with nothing in them.
+ * The window follows ACTIVE_SEASON_YEAR, the same constant that decides whether
+ * a camp's data reads as stale, so one value governs which summer the whole
+ * site is about. It used to be the current calendar year's Aug 14, which meant
+ * the picker emptied itself every year the moment that date passed: from
+ * mid-August until New Year the Weeks filter offered nothing at all.
+ *
+ * `campCount` is how many camps have a session overlapping that week, so the
+ * picker can show — and dim — weeks with nothing in them yet.
  */
 export function buildWeekOptions(
   camps: Camp[],
   today: Date = new Date(),
-  windowEnd: Date = new Date(today.getFullYear(), 7, 14) // Aug 14
+  seasonYear: number = ACTIVE_SEASON_YEAR
 ): WeekOption[] {
+  const window = summerWindow(seasonYear);
+  const seasonStart = parseLocalDate(window.start);
+  const seasonEnd = parseLocalDate(window.end);
+  if (!seasonStart || !seasonEnd) return [];
+
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const first = startOfWeek(todayStart);
-  const last = startOfWeek(windowEnd);
+  // Mid-season, start from this week; before it, start at the season.
+  const first = startOfWeek(todayStart.getTime() > seasonStart.getTime() ? todayStart : seasonStart);
+  const last = startOfWeek(seasonEnd);
 
   if (last.getTime() < first.getTime()) return [];
 

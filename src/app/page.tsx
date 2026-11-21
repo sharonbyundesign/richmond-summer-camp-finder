@@ -633,7 +633,12 @@ export default function Home() {
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-gray-600">
                   {listed.length === 0
-                    ? 'No camps found. Try adjusting your filters.'
+                    ? undatedListed.length > 0
+                      ? // "Try adjusting your filters" would be a lie sitting directly
+                        // above a list of camps: the filters are fine, we simply hold no
+                        // dates to match them against.
+                        `No camps with dates yet for this search — ${undatedListed.length} below we're still confirming`
+                      : 'No camps found. Try adjusting your filters.'
                     : `Found ${listed.length} camp${listed.length === 1 ? '' : 's'}`}
                   {radiusActive && outOfRadius.length > 0 && (
                     <span className="text-gray-500">
