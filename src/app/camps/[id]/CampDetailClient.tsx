@@ -265,6 +265,29 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                   </svg>
                 </div>
               )}
+
+              {/* Interests sit on the photo, as on the list card. */}
+              {(() => {
+                const categories = toCategories(
+                  (camp.camp_interests || []).map((i) => i.tag || i.interest_name)
+                );
+                return categories.length > 0 ? (
+                  <div className="absolute bottom-3 left-3 flex flex-wrap gap-2">
+                    {categories.map((category) => (
+                      <Link
+                        key={category}
+                        href={`/?interest=${encodeURIComponent(category)}`}
+                        onClick={() => capture('tag_pill_clicked', { interest: category, camp_id: camp.id })}
+                        aria-label={`See all ${category} camps`}
+                        className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-sm font-medium text-gray-800 shadow-sm transition-colors hover:bg-white active:bg-gray-100"
+                      >
+                        <span aria-hidden="true">{categoryIcon(category)}</span>
+                        {category}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             {/* Camp Info — stacked, right side */}
@@ -330,47 +353,26 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                 <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
               )}
 
-              {(() => {
-                const categories = toCategories(
-                  (camp.camp_interests || []).map((i) => i.tag || i.interest_name)
-                );
-                return categories.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {categories.map((category) => (
-                      <Link
-                        key={category}
-                        href={`/?interest=${encodeURIComponent(category)}`}
-                        onClick={() => capture('tag_pill_clicked', { interest: category, camp_id: camp.id })}
-                        aria-label={`See all ${category} camps`}
-                        // Invisible py-2 + -my-2 hit-slop pushes the tap target to ~44px
-                        // tall without growing the visible pill.
-                        className="group -my-2 inline-flex cursor-pointer items-center py-2"
-                      >
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 transition-colors group-hover:bg-blue-200 group-active:bg-blue-300">
-                          <span aria-hidden="true">{categoryIcon(category)}</span>
-                          {category}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                ) : null;
-              })()}
+              {/* Reviews left, the registration CTA right — where the eye
+                  lands last, and where the external arrow says it leaves. */}
+              <div className="mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                {/* Secondary by design — it must not compete with the registration CTA. */}
+                <GoogleReviewsLink camp={camp} />
 
-              <div className="mt-auto flex flex-wrap items-center gap-x-6 gap-y-3">
                 {camp.website_url && (
                   <a
                     href={camp.website_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
-                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
                   >
                     Visit Website
+                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
+                    </svg>
                   </a>
                 )}
-
-                {/* Secondary by design — it must not compete with the registration CTA. */}
-                <GoogleReviewsLink camp={camp} />
               </div>
             </div>
           </div>
