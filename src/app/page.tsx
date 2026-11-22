@@ -306,7 +306,8 @@ export default function Home() {
       });
   }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter, matchesQuery]);
 
-  const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'az');
+  // Default: newest information first; nearest first once a zip gives a starting point.
+  const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'updated');
 
   const sortCamps = useCallback(
     <T extends { camp: Camp; distance: number | null }>(list: T[]) => {

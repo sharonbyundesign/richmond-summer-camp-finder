@@ -29,7 +29,10 @@ export function initAnalytics() {
   posthog.init(KEY, {
     api_host: HOST,
     person_profiles: 'always',
-    capture_pageview: true,
+    // 'history_change', not true: camp pages open by client-side navigation, and
+    // true only records the first page load — camp page views were undercounted
+    // (29 recorded against 100 people clicking a card).
+    capture_pageview: 'history_change',
     capture_pageleave: true,
     // Session recording (Task 3). Also honoured by the project-level toggle in PostHog.
     disable_session_recording: false,
