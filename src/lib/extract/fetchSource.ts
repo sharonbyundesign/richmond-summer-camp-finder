@@ -148,6 +148,26 @@ export async function fetchSource(url: string, knownHash?: string | null): Promi
     const html = await response.text();
     const hash = hashContent(html.replace(/<script[\s\S]*?<\/script>/gi, ''));
 
+    // A page that is almost all script and almost no text renders its content
+    // in the browser, so a plain fetch will never see the schedule. Art
+    // Factory's camp page is 148KB of HTML and 2KB of visible text. Calling
+    // that `ok` makes it indistinguishable from a page that simply has no
+    // dates on it, which is the wrong thing to tell a reviewer.
+    const visible = html
+      .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (html.length > 40_000 && visible.length < 2_000) {
+      return {
+        outcome: 'needs_js',
+        status: response.status,
+        html,
+        contentHash: hash,
+        note: `${Math.round(html.length / 1024)}KB html, ${Math.round(visible.length / 1024)}KB text`,
+      };
+    }
+
     if (knownHash && knownHash === hash) {
       return { outcome: 'unchanged', status: response.status, html, contentHash: hash };
     }
