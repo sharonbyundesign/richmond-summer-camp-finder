@@ -88,6 +88,9 @@ export type EventName =
   | 'email_signup_completed'
   // Beta banner's second action: did the notice itself drive signups?
   | 'beta_signup_clicked'
+  // A parent asked to be told when one specific camp's new dates are posted.
+  // Counted per camp, this is the backfill's priority list.
+  | 'camp_notify_requested'
   // Existing funnel.
   | 'camp_saved'
   | 'camp_unsaved'
