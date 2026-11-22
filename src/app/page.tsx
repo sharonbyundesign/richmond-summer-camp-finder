@@ -617,7 +617,7 @@ export default function Home() {
                     // color-scheme preference — unreadable against this always-white
                     // control. Options inherit the same color, so neither reads as
                     // disabled/placeholder text.
-                    className="rounded-full border border-gray-300 bg-white py-1.5 pl-4 pr-9 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    className="select-pill rounded-full border border-gray-300 bg-white py-1.5 pl-4 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="distance" className="text-gray-900">Distance</option>
                     <option value="az" className="text-gray-900">A–Z</option>
