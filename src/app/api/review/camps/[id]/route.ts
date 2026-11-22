@@ -5,6 +5,34 @@ import { reviewDisabled, REVIEW_SEASON_YEAR } from '@/lib/review/guard';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+const PROPOSAL_COLUMNS =
+  'id, proposed, validation, confidence, extractor, review_note, extracted_at, status, source_id';
+
+/**
+ * Everything staged for this camp and not yet ruled on — the extractor's and
+ * the camp's own (migration 008), with who sent the latter. Before 008 the
+ * submission columns do not exist, so the plain query is the fallback.
+ */
+async function loadProposals(
+  supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>,
+  campId: string,
+) {
+  const query = (columns: string) =>
+    supabase
+      .from('camp_updates')
+      .select(columns)
+      .eq('camp_id', campId)
+      .eq('target_table', 'camp_sessions')
+      .in('status', ['pending', 'needs_review'])
+      .order('extracted_at', { ascending: true });
+
+  const withSender = await query(
+    `${PROPOSAL_COLUMNS}, submission_id,
+     submission:camp_submissions(contact_name, contact_email, contact_role, message, created_at)`,
+  );
+  return withSender.error ? query(PROPOSAL_COLUMNS) : withSender;
+}
+
 /**
  * One camp, with its sessions split by season and the pages we know to read.
  * Last season's sessions come back so they can sit beside the form as
@@ -38,13 +66,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     // Everything the extractor staged and nobody has ruled on yet. These are
     // what a reviewer should be reading — typing a session by hand is the
     // fallback, not the main path.
-    supabase
-      .from('camp_updates')
-      .select('id, proposed, validation, confidence, extractor, review_note, extracted_at, status, source_id')
-      .eq('camp_id', params.id)
-      .eq('target_table', 'camp_sessions')
-      .in('status', ['pending', 'needs_review'])
-      .order('extracted_at', { ascending: true }),
+    loadProposals(supabase, params.id),
   ]);
 
   if (campResult.error) {

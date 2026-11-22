@@ -119,7 +119,10 @@ export type EventName =
   | 'search_performed'
   | 'price_filter_toggled'
   | 'day_type_filter_toggled'
-  | 'radius_changed';
+  | 'radius_changed'
+  // Camps sending their own dates: the link on a camp page, and a sent form.
+  | 'camp_update_link_clicked'
+  | 'camp_update_submitted';
 
 export function capture(event: EventName, properties?: Record<string, unknown>) {
   if (!started) return;
