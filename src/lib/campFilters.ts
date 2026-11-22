@@ -14,7 +14,7 @@ import { normalizeInterest, toCategories } from '@/lib/interest-categories';
 // ---------------------------------------------------------------------------
 
 export type SessionType = 'full' | 'am' | 'pm' | 'overnight';
-export type PriceBracket = 'under200' | '200-350' | '350-500' | '500plus';
+export type PriceBracket = 'free' | 'under200' | '200-350' | '350-500' | '500plus';
 
 export interface SessionLike {
   start_date?: string | null;
@@ -59,6 +59,7 @@ export const SESSION_TYPE_OPTIONS: Array<{ value: SessionType; label: string }> 
 ];
 
 export const PRICE_BRACKET_OPTIONS: Array<{ value: PriceBracket; label: string }> = [
+  { value: 'free', label: 'Free' },
   { value: 'under200', label: 'Under $200' },
   { value: '200-350', label: '$200–350' },
   { value: '350-500', label: '$350–500' },
@@ -112,12 +113,44 @@ export function classifySessionType(session: SessionLike): SessionType | 'unknow
   return start < 12 * 60 ? 'am' : 'pm';
 }
 
-export function priceBracketOf(price: number | null | undefined): PriceBracket | null {
+/**
+ * What a session costs per week, which is what the price filter compares.
+ *
+ * Nearly every session runs a week, so its price is already weekly. The few
+ * that run two weeks or longer (theatre intensives, music institutes) are
+ * divided by their weeks — otherwise a $750 two-week camp reads as dearer than
+ * a $500 one-week camp that costs more per week. Sessions shorter than a week
+ * keep their actual price: scaling a $120 three-day camp up to "$200 a week"
+ * would put it above what a parent actually pays.
+ */
+export function weeklyPrice(session: SessionLike): number | null {
+  const { price } = session;
   if (price === null || price === undefined) return null;
-  if (price < 200) return 'under200';
-  if (price < 350) return '200-350';
-  if (price < 500) return '350-500';
-  return '500plus';
+  const days = weekdaysBetween(session.start_date, session.end_date);
+  if (days === null || days <= 5) return price;
+  return price / Math.round(days / 5);
+}
+
+/**
+ * Whether a session fits a price option. "Under $200" includes free camps —
+ * a parent asking for cheap camps wants the free ones too; "Free" is the
+ * narrower question.
+ */
+export function sessionInPriceBracket(session: SessionLike, bracket: PriceBracket): boolean {
+  const weekly = weeklyPrice(session);
+  if (weekly === null) return false;
+  switch (bracket) {
+    case 'free':
+      return weekly === 0;
+    case 'under200':
+      return weekly < 200;
+    case '200-350':
+      return weekly >= 200 && weekly < 350;
+    case '350-500':
+      return weekly >= 350 && weekly < 500;
+    case '500plus':
+      return weekly >= 500;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +167,20 @@ function parseISODate(dateStr: string): Date | null {
   const m = dateStr.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
   return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+}
+
+/** Monday–Friday days from start to end inclusive; null without both dates. */
+function weekdaysBetween(start?: string | null, end?: string | null): number | null {
+  if (!start || !end) return null;
+  const from = parseISODate(start);
+  const to = parseISODate(end);
+  if (!from || !to || to < from) return null;
+  let days = 0;
+  for (const d = new Date(from); d <= to; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dow = d.getUTCDay();
+    if (dow !== 0 && dow !== 6) days++;
+  }
+  return days;
 }
 
 function toISO(d: Date): string {
@@ -336,10 +383,9 @@ export function filterCamps<T extends CampLike>(
     // Price bracket: at least one session in a selected bracket. Null-price
     // sessions never match an active price filter.
     if (priceSet.size > 0) {
-      const ok = sessions.some((s) => {
-        const bracket = priceBracketOf(s.price);
-        return bracket !== null && priceSet.has(bracket);
-      });
+      const ok = sessions.some((s) =>
+        Array.from(priceSet).some((bracket) => sessionInPriceBracket(s, bracket)),
+      );
       if (!ok) return false;
     }
 
