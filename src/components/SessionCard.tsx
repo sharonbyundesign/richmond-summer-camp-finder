@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { parseLocalDate } from '@/lib/v2/weeks';
 
 interface SessionCardProps {
   session: {
@@ -32,7 +33,11 @@ export default function SessionCard({ session, campId, campName }: SessionCardPr
   }, [session.id]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // parseLocalDate, not new Date: a bare YYYY-MM-DD is parsed as UTC
+    // midnight, which in Richmond renders as the day before.
+    const date = parseLocalDate(dateString);
+    if (!date) return dateString;
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

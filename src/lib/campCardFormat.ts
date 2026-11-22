@@ -1,4 +1,5 @@
 import type { CampSession } from '@/types/camp';
+import { parseLocalDate } from '@/lib/v2/weeks';
 
 /**
  * Address strings are inconsistent — some have commas, some don't, some carry embedded
@@ -53,11 +54,14 @@ export function ageRange(sessions?: CampSession[]): string | null {
 
 /** "May 31 – Aug 20", with years only when the range crosses one. */
 export function sessionRange(sessions?: CampSession[]): string | null {
+  // parseLocalDate, not new Date: a bare YYYY-MM-DD is parsed as UTC midnight,
+  // which in Richmond formats as the day before — every card was showing its
+  // season starting and ending a day early.
   const starts = (sessions || [])
-    .map((s) => (s.start_date ? new Date(s.start_date).getTime() : NaN))
+    .map((s) => (s.start_date ? (parseLocalDate(s.start_date)?.getTime() ?? NaN) : NaN))
     .filter((t) => !Number.isNaN(t));
   const ends = (sessions || [])
-    .map((s) => (s.end_date ? new Date(s.end_date).getTime() : NaN))
+    .map((s) => (s.end_date ? (parseLocalDate(s.end_date)?.getTime() ?? NaN) : NaN))
     .filter((t) => !Number.isNaN(t));
 
   if (starts.length === 0 || ends.length === 0) return null;

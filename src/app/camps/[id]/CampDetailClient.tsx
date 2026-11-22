@@ -18,6 +18,7 @@ import {
 } from '@/lib/trust';
 import TrustBadge from '@/components/TrustBadge';
 import type { VerificationStatus } from '@/types/database';
+import { parseLocalDate } from '@/lib/v2/weeks';
 
 interface CampSession {
   id?: string;
@@ -119,7 +120,11 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
   // The camp arrives from the server component; nothing to fetch here.
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // parseLocalDate, not new Date: a bare YYYY-MM-DD is parsed as UTC
+    // midnight, which in Richmond renders as the day before.
+    const date = parseLocalDate(dateString);
+    if (!date) return dateString;
+    return date.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
