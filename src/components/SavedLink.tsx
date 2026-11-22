@@ -18,10 +18,15 @@ export default function SavedLink({ className = '' }: { className?: string }) {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
+    // Camps (saved from cards) plus sessions (saved on a camp's page) — the
+    // same two lists the Saved page shows.
+    const length = (key: string) => {
+      const raw = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(raw) ? raw.length : 0;
+    };
     const read = () => {
       try {
-        const raw = JSON.parse(localStorage.getItem('savedCamps') || '[]');
-        setCount(Array.isArray(raw) ? raw.length : 0);
+        setCount(length('savedCamps') + length('savedSessions'));
       } catch {
         // Private mode or corrupt value: show the link without a count.
         setCount(0);
@@ -30,9 +35,11 @@ export default function SavedLink({ className = '' }: { className?: string }) {
 
     read();
     window.addEventListener('savedCampsUpdated', read);
+    window.addEventListener('savedSessionsUpdated', read);
     window.addEventListener('storage', read);
     return () => {
       window.removeEventListener('savedCampsUpdated', read);
+      window.removeEventListener('savedSessionsUpdated', read);
       window.removeEventListener('storage', read);
     };
   }, []);
@@ -43,7 +50,7 @@ export default function SavedLink({ className = '' }: { className?: string }) {
   return (
     <Link
       href="/saved"
-      aria-label={hasSaved ? `Saved camps, ${saved} saved` : 'Saved camps'}
+      aria-label={hasSaved ? `Saved, ${saved} items` : 'Saved'}
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:text-gray-900 ${className}`}
     >
       {/* Outlined whether or not anything is saved: the count is what says how
