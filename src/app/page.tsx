@@ -423,6 +423,21 @@ export default function Home() {
     return inRange.filter(matchesQuery).sort((a, b) => a.name.localeCompare(b.name));
   }, [undated, showUndated, radiusActive, zipCenter, pill.radius, matchesQuery]);
 
+  // One search event per settled query, not per keystroke: sent once the
+  // parent stops typing for a second, with how many camps it found, so we can
+  // see what people look for and which searches come back empty.
+  const lastSearchSent = useRef('');
+  const resultCount = listed.length + undatedListed.length;
+  useEffect(() => {
+    const settled = query.trim().toLowerCase().slice(0, 100);
+    if (settled.length < 2 || settled === lastSearchSent.current) return;
+    const timer = window.setTimeout(() => {
+      lastSearchSent.current = settled;
+      capture('search_performed', { query: settled, results: resultCount, zero_results: resultCount === 0 });
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [query, resultCount]);
+
   /** How many of the shown camps serve every selected age, not just one of them. */
   const fitsAllCount = useMemo(
     () =>

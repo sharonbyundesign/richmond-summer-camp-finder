@@ -353,7 +353,11 @@ export default function SearchBar({
               <select
                 id="bar-radius"
                 value={state.radius}
-                onChange={(event) => onChange({ ...state, radius: Number(event.target.value) })}
+                onChange={(event) => {
+                  const radius = Number(event.target.value);
+                  onChange({ ...state, radius });
+                  capture('radius_changed', { radius_miles: radius, zip_active: state.zip.length === 5 });
+                }}
                 className="select-pill w-full rounded-full border border-gray-300 bg-white py-2 pl-4 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               >
                 {RADIUS_OPTIONS.map((miles) => (
@@ -380,7 +384,15 @@ export default function SearchBar({
           <OptionList<SessionType>
             options={SESSION_TYPE_OPTIONS}
             selected={filters.sessionTypes}
-            onToggle={(value) => onFiltersChange({ sessionTypes: toggle(filters.sessionTypes, value) })}
+            onToggle={(value) => {
+              const next = toggle(filters.sessionTypes, value);
+              onFiltersChange({ sessionTypes: next });
+              capture('day_type_filter_toggled', {
+                day_type: value,
+                action: next.includes(value) ? 'added' : 'removed',
+                total_selected: next.length,
+              });
+            }}
           />
         </Popover>
       )}
@@ -391,7 +403,15 @@ export default function SearchBar({
           <OptionList<PriceBracket>
             options={PRICE_BRACKET_OPTIONS}
             selected={filters.priceBrackets}
-            onToggle={(value) => onFiltersChange({ priceBrackets: toggle(filters.priceBrackets, value) })}
+            onToggle={(value) => {
+              const next = toggle(filters.priceBrackets, value);
+              onFiltersChange({ priceBrackets: next });
+              capture('price_filter_toggled', {
+                price_bracket: value,
+                action: next.includes(value) ? 'added' : 'removed',
+                total_selected: next.length,
+              });
+            }}
           />
           {/* Most camps haven't posted prices yet, so a price filter hides far
               more than a parent would guess. Saying so keeps "12 camps" from
