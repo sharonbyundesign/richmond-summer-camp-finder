@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { filterCamps, parseFiltersFromParams, undatedCamps } from '@/lib/campFilters';
 import { zipToLatLng } from '@/lib/richmondZips';
-import {
-  campListSelect,
-  isMissingColumnError,
-  recordTrustColumnsPresent,
-  trustColumnsAssumedPresent,
-} from '@/lib/campQuery';
+import { campListSelect, selectWithFallback } from '@/lib/campQuery';
+import { applyServiceArea, type CampLocation } from '@/lib/locations';
 import type { VerificationStatus } from '@/types/database';
 
 // Force dynamic rendering since we use request.url for query parameters
@@ -56,41 +52,38 @@ type CampWithRelations = {
     confidence_dates?: number | null;
     confidence_price?: number | null;
     confidence_ages?: number | null;
+    /** The site this session runs at (migration 007). */
+    location_id?: string | null;
   }>;
   camp_interests?: Array<{
     id?: string;
     tag?: string;
     interest_name?: string;
   }>;
+  /** Absent until migration 007 is applied. */
+  camp_locations?: CampLocation[];
 };
 
 /**
- * Camps with their sessions and interests, asking for provenance when the
- * database has it. A database without the trust columns serves the same camps
- * minus the badges rather than failing the request.
+ * Camps with their sessions, interests, provenance and sites, asking for each
+ * optional piece of schema the database is believed to have and dropping
+ * whichever one it reports missing — so a database without migration 001 or
+ * 007 serves the same camps, minus badges or sites, rather than failing.
+ *
+ * Out-of-area sites and their sessions are removed here, once, so nothing
+ * downstream can show them.
  */
 async function fetchCamps(supabase: SupabaseServerClient) {
-  const run = (withTrust: boolean) =>
-    supabase.from('camps').select(campListSelect(withTrust)).order('name', { ascending: true });
+  const result = await selectWithFallback((features) =>
+    supabase.from('camps').select(campListSelect(features)).order('name', { ascending: true }),
+  );
 
-  const wantTrust = trustColumnsAssumedPresent();
-  const first = await run(wantTrust);
+  if (result.error) return { camps: [] as CampWithRelations[], error: result.error };
 
-  if (!first.error) {
-    if (wantTrust) recordTrustColumnsPresent(true);
-    return { camps: (first.data as unknown as CampWithRelations[] | null) ?? [], error: null };
-  }
-
-  if (wantTrust && isMissingColumnError(first.error)) {
-    recordTrustColumnsPresent(false);
-    const retry = await run(false);
-    return {
-      camps: (retry.data as unknown as CampWithRelations[] | null) ?? [],
-      error: retry.error,
-    };
-  }
-
-  return { camps: [] as CampWithRelations[], error: first.error };
+  const camps = ((result.data as unknown as CampWithRelations[] | null) ?? []).map((camp) =>
+    applyServiceArea(camp),
+  );
+  return { camps, error: null };
 }
 
 export async function GET(request: Request) {

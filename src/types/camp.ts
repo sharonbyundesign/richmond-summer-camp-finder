@@ -1,4 +1,5 @@
 import type { VerificationStatus } from '@/types/database';
+import type { CampLocation } from '@/lib/locations';
 
 export interface CampSession {
   id?: string;
@@ -24,6 +25,8 @@ export interface CampSession {
   confidence_dates?: number | null;
   confidence_price?: number | null;
   confidence_ages?: number | null;
+  /** The site this session runs at (migration 007). Null when unknown. */
+  location_id?: string | null;
 }
 
 export interface CampInterest {
@@ -54,6 +57,8 @@ export interface Camp {
   zipcode?: CampZipcode | null;
   camp_sessions?: CampSession[];
   camp_interests?: CampInterest[];
+  /** Every in-area site this camp runs at (migration 007). Absent before it. */
+  camp_locations?: CampLocation[];
   /** Provenance for the camp row itself; sessions carry their own. */
   source_url?: string | null;
   season_year?: number | null;

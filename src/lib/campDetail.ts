@@ -1,10 +1,6 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
-import {
-  campDetailSelect,
-  isMissingColumnError,
-  recordTrustColumnsPresent,
-  trustColumnsAssumedPresent,
-} from '@/lib/campQuery';
+import { campDetailSelect, selectWithFallback } from '@/lib/campQuery';
+import { applyServiceArea } from '@/lib/locations';
 
 type SupabaseServerClient = NonNullable<ReturnType<typeof getSupabaseServerClient>>;
 
@@ -26,22 +22,13 @@ export async function loadCampDetail(campId: string): Promise<CampDetailResult> 
     return { ok: false, status: 500, error: 'Supabase credentials are not configured.' };
   }
 
-  const run = (withTrust: boolean) =>
+  const result = await selectWithFallback((features) =>
     (supabase as SupabaseServerClient)
       .from('camps')
-      .select(campDetailSelect(withTrust))
+      .select(campDetailSelect(features))
       .eq('id', campId)
-      .single();
-
-  const wantTrust = trustColumnsAssumedPresent();
-  let result = await run(wantTrust);
-
-  if (!result.error) {
-    if (wantTrust) recordTrustColumnsPresent(true);
-  } else if (wantTrust && isMissingColumnError(result.error)) {
-    recordTrustColumnsPresent(false);
-    result = await run(false);
-  }
+      .single(),
+  );
 
   if (result.error) {
     // PGRST116 is "no rows" for .single() — the camp simply is not there.
@@ -51,5 +38,6 @@ export async function loadCampDetail(campId: string): Promise<CampDetailResult> 
       : { ok: false, status: 500, error: result.error.message };
   }
 
-  return { ok: true, camp: result.data as unknown as Record<string, unknown> };
+  // Same rule as the list: out-of-area sites and their sessions never reach the page.
+  return { ok: true, camp: applyServiceArea(result.data as unknown as Record<string, unknown>) };
 }
