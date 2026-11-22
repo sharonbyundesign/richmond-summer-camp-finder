@@ -51,10 +51,23 @@ export function registrationPill(
   if (reg.status === 'open' || (reg.opens_on && reg.opens_on <= today)) {
     return { state: 'open', text: 'Registration open' };
   }
-  // The earliest upcoming window, so a member date isn't missed.
-  const next = [reg.priority_opens_on, reg.opens_on].filter((d): d is string => Boolean(d) && d! > today).sort()[0];
-  if (next) return { state: 'opens', text: `Registration opens ${shortDate(next)}` };
-  if (reg.opens_note) return { state: 'note', text: `Registration: ${reg.opens_note}` };
+  // Lead with the date everyone can use; an earlier members/returning window
+  // rides along, since most families aren't in it.
+  const general = reg.opens_on && reg.opens_on > today ? reg.opens_on : null;
+  const early = reg.priority_opens_on && reg.priority_opens_on > today ? reg.priority_opens_on : null;
+  if (general && early) return { state: 'opens', text: `Opens ${shortDate(general)} · early access ${shortDate(early)}` };
+  if (general) return { state: 'opens', text: `Registration opens ${shortDate(general)}` };
+  if (early) return { state: 'opens', text: `Early registration opens ${shortDate(early)}` };
+  if (reg.opens_note) {
+    // A card has room for a clause: "Mid to late February; the schedule…" →
+    // "Registration opens mid to late February".
+    const clause = reg.opens_note.split(/[;.]/)[0].trim();
+    // Lowercase "Mid…"/"Early…" mid-sentence, but never a month's name.
+    const lead = /^(mid|early|late|in|after|before|around|sometime)\b/i.test(clause)
+      ? clause.charAt(0).toLowerCase() + clause.slice(1)
+      : clause;
+    return { state: 'note', text: `Registration opens ${lead}` };
+  }
   return null;
 }
 
