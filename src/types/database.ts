@@ -166,6 +166,27 @@ export interface CampUpdate {
   reviewed_by?: string | null
   review_note?: string | null
   applied_at?: string | null
+  /** Set when the camp sent this through its update form (migration 008). */
+  submission_id?: string | null
+}
+
+/**
+ * One camp's own update, sent through /camps/[id]/update (migration 008). Each
+ * session in it is a camp_updates proposal pointing back here. Personal data:
+ * service role only.
+ */
+export interface CampSubmission {
+  id: string
+  camp_id: string
+  contact_name: string
+  contact_email: string
+  contact_role?: string | null
+  message?: string | null
+  season_year: number
+  session_count: number
+  /** sha256 of the sender's IP, only to rate-limit the form. */
+  ip_hash?: string | null
+  created_at: string
 }
 
 /**
@@ -222,6 +243,11 @@ export type Database = {
         Row: CampUpdate
         Insert: Omit<CampUpdate, 'id' | 'extracted_at'>
         Update: Partial<Omit<CampUpdate, 'id' | 'extracted_at'>>
+      }
+      camp_submissions: {
+        Row: CampSubmission
+        Insert: Omit<CampSubmission, 'id' | 'created_at'>
+        Update: Partial<Omit<CampSubmission, 'id' | 'created_at'>>
       }
     }
     Views: {

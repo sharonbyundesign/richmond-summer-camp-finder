@@ -674,6 +674,17 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
           >
             Report incorrect info
           </a>
+          <span aria-hidden="true"> · </span>
+          <span className="whitespace-nowrap">
+            Run this camp?{' '}
+            <Link
+              href={`/camps/${camp.id}/update`}
+              onClick={() => capture('camp_update_link_clicked', { camp_id: camp.id, camp_name: camp.name })}
+              className="underline underline-offset-2 hover:text-gray-600"
+            >
+              Add your {ACTIVE_SEASON_YEAR} dates
+            </Link>
+          </span>
         </p>
       </div>
     </main>

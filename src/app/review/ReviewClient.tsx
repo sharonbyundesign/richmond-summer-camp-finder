@@ -13,6 +13,9 @@ type QueueCamp = {
   sessions_in_season: number;
   sessions_stale: number;
   state: 'empty' | 'stale' | 'done';
+  /** Proposals nobody has ruled on yet, and whether any came from the camp. */
+  waiting?: number;
+  waiting_from_camp?: boolean;
 };
 
 type Session = {
@@ -38,7 +41,43 @@ type Proposal = {
   extractor: string | null;
   review_note: string | null;
   status: string;
+  /** Set when the camp sent this through its update form (migration 008). */
+  submission_id?: string | null;
+  submission?: Submission | null;
 };
+
+type Submission = {
+  contact_name: string;
+  contact_email: string;
+  contact_role: string | null;
+  message: string | null;
+  created_at: string;
+};
+
+/** Host of a URL without "www.", or null. */
+function hostOf(url: unknown): string | null {
+  if (typeof url !== 'string' || !url) return null;
+  try {
+    return new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Does the sender's email belong to the camp's own domain? A match is good
+ * evidence the camp sent it; a gmail address is common for small camps and
+ * not a red flag on its own, but it is worth a reply before approving.
+ */
+function senderCheck(email: string, website: unknown): { ok: boolean; text: string } {
+  const domain = email.split('@')[1]?.toLowerCase() ?? '';
+  const site = hostOf(website);
+  if (!site) return { ok: false, text: 'The camp has no website on file to check the email against.' };
+  const matches = domain === site || domain.endsWith(`.${site}`) || site.endsWith(`.${domain}`);
+  return matches
+    ? { ok: true, text: `Email domain matches the camp's website (${site}).` }
+    : { ok: false, text: `Email is @${domain}, the camp's website is ${site}. Make sure it is the camp before approving.` };
+}
 
 type Draft = {
   name: string;
@@ -281,8 +320,19 @@ export default function ReviewClient() {
                     <span className="block truncate text-sm font-medium text-gray-900">{c.name}</span>
                     <span className="block truncate text-xs text-gray-500">{c.location ?? '—'}</span>
                   </span>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATE_STYLE[c.state]}`}>
-                    {c.state === 'done' ? `${c.sessions_in_season}` : c.state === 'stale' ? `${c.sessions_stale} old` : '0'}
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATE_STYLE[c.state]}`}>
+                      {c.state === 'done' ? `${c.sessions_in_season}` : c.state === 'stale' ? `${c.sessions_stale} old` : '0'}
+                    </span>
+                    {(c.waiting ?? 0) > 0 && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          c.waiting_from_camp ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {c.waiting} {c.waiting_from_camp ? 'from camp' : 'to review'}
+                      </span>
+                    )}
                   </span>
                 </button>
               </li>
@@ -361,13 +411,47 @@ export default function ReviewClient() {
               {detail.proposals.length > 0 && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-5">
                   <h3 className="text-sm font-semibold text-gray-900">
-                    Found on the camp&rsquo;s page ({detail.proposals.length}) — review and approve
+                    Waiting for review ({detail.proposals.length})
                   </h3>
                   <p className="mt-1 text-xs text-gray-600">
-                    Staged by the extractor and not published. Correct anything that is wrong,
-                    then approve: it publishes under your name as{' '}
-                    <code>human_checked</code>, exactly as if you had typed it.
+                    Not published yet. Correct anything that is wrong, then approve. Sessions the
+                    extractor found publish as <code>human_checked</code>; sessions the camp sent
+                    publish as <code>camp_confirmed</code>, so approve those only once you are sure
+                    the sender is the camp.
                   </p>
+
+                  {/* One block per camp submission: who sent it, and whether
+                      their email looks like the camp's. */}
+                  {Array.from(
+                    new Map(
+                      detail.proposals
+                        .filter((p) => p.submission_id && p.submission)
+                        .map((p) => [p.submission_id as string, p.submission as Submission]),
+                    ).entries(),
+                  ).map(([submissionId, sub]) => {
+                    const check = senderCheck(sub.contact_email, detail.camp.website_url);
+                    const count = detail.proposals.filter((p) => p.submission_id === submissionId).length;
+                    return (
+                      <div key={submissionId} className="mt-4 rounded-lg border border-blue-200 bg-white p-3 text-sm">
+                        <p className="font-medium text-gray-900">
+                          Sent by the camp: {sub.contact_name}
+                          {sub.contact_role ? ` (${sub.contact_role})` : ''} ·{' '}
+                          <a href={`mailto:${sub.contact_email}`} className="text-blue-700 underline">
+                            {sub.contact_email}
+                          </a>
+                        </p>
+                        <p className="mt-0.5 text-xs text-gray-500">
+                          {count} {count === 1 ? 'session' : 'sessions'} · {new Date(sub.created_at).toLocaleString()}
+                        </p>
+                        <p className={`mt-1 text-xs ${check.ok ? 'text-green-700' : 'text-amber-800'}`}>{check.text}</p>
+                        {sub.message && (
+                          <p className="mt-2 whitespace-pre-wrap rounded-md bg-gray-50 p-2 text-xs text-gray-700">
+                            {sub.message}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
 
                   <ul className="mt-4 space-y-3">
                     {detail.proposals.map((p) => {
@@ -402,8 +486,18 @@ export default function ReviewClient() {
                           </div>
 
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                            {p.confidence != null && <span>confidence {p.confidence}</span>}
+                            {p.submission_id ? (
+                              <span className="font-medium text-blue-700">from {p.submission?.contact_name ?? 'the camp'}</span>
+                            ) : (
+                              p.confidence != null && <span>confidence {p.confidence}</span>
+                            )}
                             {p.extractor && <span>{p.extractor}</span>}
+                            {typeof p.proposed.start_time === 'string' && (
+                              <span>
+                                {String(p.proposed.start_time)}–{String(p.proposed.end_time ?? '?')}
+                              </span>
+                            )}
+                            {typeof p.proposed.location_id === 'string' && <span>site set</span>}
                             {issues.length > 0 && (
                               <span className="text-amber-800">
                                 {issues.map((i) => `${i.field}: ${i.message}`).join(' · ')}
