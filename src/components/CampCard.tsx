@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { cityFromLocation, ageRange, sessionRange } from '@/lib/campCardFormat';
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
@@ -277,40 +276,11 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
           </p>
         )}
 
-        <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-200 pt-3">
-          {camp.website_url ? (
-            <a
-              href={camp.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                event.stopPropagation();
-                // Sharon's taxonomy is already collecting on scouty-beta; keep her name
-                // so the outbound funnel stays one continuous series.
-                capture('camp_website_visited', {
-                  camp_id: camp.id,
-                  camp_name: camp.name,
-                  url: camp.website_url,
-                });
-              }}
-              className="inline-flex min-h-[36px] items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
-            >
-              Visit website
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                />
-              </svg>
-            </a>
-          ) : (
-            <span />
-          )}
-
-          <GoogleReviewsLink camp={camp} />
-        </div>
+        {/* The card has one action: open the camp. "Visit website" and
+            "Reviews on Google" live on the detail page, where someone has read
+            enough to want them. They were also the <a> elements nested inside
+            this card's own <Link>, which is invalid HTML and logged a
+            hydration warning on every render. */}
       </div>
     </Link>
   );
