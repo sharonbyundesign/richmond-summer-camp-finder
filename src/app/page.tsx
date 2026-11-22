@@ -20,14 +20,13 @@ import {
   type Filters,
 } from '@/lib/campFilters';
 import type { Camp } from '@/types/camp';
-import { ACTIVE_SEASON_YEAR } from '@/lib/trust';
 import RecommendedSection from '@/components/v2/RecommendedSection';
 import { capture, REC_FLAG } from '@/lib/analytics';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
 
 const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
-type SortMode = 'distance' | 'az' | 'price';
+type SortMode = 'distance' | 'az' | 'price' | 'updated';
 
 const DESKTOP_QUERY = '(min-width: 768px)';
 
@@ -310,44 +309,52 @@ export default function Home() {
 
   const sortCamps = useCallback(
     <T extends { camp: Camp; distance: number | null }>(list: T[]) => {
-      type Entry = (typeof list)[number];
-      const byName = (a: Entry, b: Entry) => a.camp.name.localeCompare(b.camp.name);
-      let byMode: (a: Entry, b: Entry) => number = byName;
+      const sorted = [...list];
 
       if (sort === 'distance') {
-        byMode = (a, b) => {
-          if (a.distance === null && b.distance === null) return byName(a, b);
+        sorted.sort((a, b) => {
+          if (a.distance === null && b.distance === null) return a.camp.name.localeCompare(b.camp.name);
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
           return a.distance - b.distance;
-        };
+        });
       } else if (sort === 'price') {
         // Camps without a price for the chosen ages and weeks go last, A–Z —
         // most camps haven't posted prices yet, and they shouldn't vanish.
         const price = new Map(
-          list.map((entry) => [entry.camp.id, cheapestFittingWeeklyPrice(entry.camp, pill.ages, selectedWeeks)]),
+          sorted.map((entry) => [entry.camp.id, cheapestFittingWeeklyPrice(entry.camp, pill.ages, selectedWeeks)]),
         );
-        byMode = (a, b) => {
+        sorted.sort((a, b) => {
           const pa = price.get(a.camp.id) ?? null;
           const pb = price.get(b.camp.id) ?? null;
-          if (pa === null && pb === null) return byName(a, b);
+          if (pa === null && pb === null) return a.camp.name.localeCompare(b.camp.name);
           if (pa === null) return 1;
           if (pb === null) return -1;
-          return pa - pb || byName(a, b);
-        };
+          return pa - pb || a.camp.name.localeCompare(b.camp.name);
+        });
+      } else if (sort === 'updated') {
+        // Newest change to the camp or any of its sessions or checks first, so
+        // freshly added dates (next summer's, as they come in) surface on top.
+        const latest = new Map(
+          sorted.map((entry) => {
+            const stamps = [
+              entry.camp.updated_at,
+              entry.camp.last_verified_at,
+              ...(entry.camp.camp_sessions ?? []).flatMap((s) => [s.updated_at, s.last_verified_at]),
+            ].filter((t): t is string => Boolean(t));
+            return [entry.camp.id, stamps.sort().pop() ?? ''];
+          }),
+        );
+        sorted.sort(
+          (a, b) =>
+            (latest.get(b.camp.id) ?? '').localeCompare(latest.get(a.camp.id) ?? '') ||
+            a.camp.name.localeCompare(b.camp.name),
+        );
+      } else {
+        sorted.sort((a, b) => a.camp.name.localeCompare(b.camp.name));
       }
 
-      // Whatever the sort, camps with dates for the summer parents are
-      // planning come first; the chosen order applies within each group.
-      const season = String(ACTIVE_SEASON_YEAR);
-      const current = new Set(
-        list
-          .filter((entry) => entry.camp.camp_sessions?.some((s) => s.start_date?.startsWith(season)))
-          .map((entry) => entry.camp.id),
-      );
-      const tier = (entry: Entry) => (current.has(entry.camp.id) ? 0 : 1);
-
-      return [...list].sort((a, b) => tier(a) - tier(b) || byMode(a, b));
+      return sorted;
     },
     [sort, pill.ages, selectedWeeks]
   );
@@ -647,6 +654,7 @@ export default function Home() {
                     <option value="distance" className="text-gray-900">Distance</option>
                     <option value="az" className="text-gray-900">A–Z</option>
                     <option value="price" className="text-gray-900">Price: low to high</option>
+                    <option value="updated" className="text-gray-900">Recently updated</option>
                   </select>
                 </div>
               </div>

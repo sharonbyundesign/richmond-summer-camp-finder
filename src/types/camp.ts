@@ -20,6 +20,8 @@ export interface CampSession {
   source_url?: string | null;
   season_year?: number | null;
   last_verified_at?: string | null;
+  /** When the row last changed; drives the "Recently updated" sort. */
+  updated_at?: string | null;
   verification_status?: VerificationStatus;
   /** 0–1, or null when the field has never been scored. */
   confidence_dates?: number | null;
@@ -63,6 +65,8 @@ export interface Camp {
   source_url?: string | null;
   season_year?: number | null;
   last_verified_at?: string | null;
+  /** When the row last changed; drives the "Recently updated" sort. */
+  updated_at?: string | null;
   verification_status?: VerificationStatus;
 }
 

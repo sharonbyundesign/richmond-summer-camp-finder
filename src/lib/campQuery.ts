@@ -108,9 +108,9 @@ function buildSelect(features: SelectFeatures, extraCampColumns = '', extraSessi
   ),${INTERESTS}${features.locations ? `,${LOCATIONS}` : ''}`;
 }
 
-/** Select for the list route. */
+/** Select for the list route. updated_at feeds the "Recently updated" sort. */
 export function campListSelect(features: SelectFeatures): string {
-  return buildSelect(features);
+  return buildSelect(features, '\n  updated_at', '\n    updated_at');
 }
 
 /** Select for the detail route, which also shows row timestamps. */
