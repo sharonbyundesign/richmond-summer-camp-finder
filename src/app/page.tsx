@@ -20,6 +20,7 @@ import {
   type Filters,
 } from '@/lib/campFilters';
 import type { Camp } from '@/types/camp';
+import { ACTIVE_SEASON_YEAR } from '@/lib/trust';
 import RecommendedSection from '@/components/v2/RecommendedSection';
 import { capture, REC_FLAG } from '@/lib/analytics';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
@@ -309,34 +310,44 @@ export default function Home() {
 
   const sortCamps = useCallback(
     <T extends { camp: Camp; distance: number | null }>(list: T[]) => {
-      const sorted = [...list];
+      type Entry = (typeof list)[number];
+      const byName = (a: Entry, b: Entry) => a.camp.name.localeCompare(b.camp.name);
+      let byMode: (a: Entry, b: Entry) => number = byName;
 
       if (sort === 'distance') {
-        sorted.sort((a, b) => {
-          if (a.distance === null && b.distance === null) return a.camp.name.localeCompare(b.camp.name);
+        byMode = (a, b) => {
+          if (a.distance === null && b.distance === null) return byName(a, b);
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
           return a.distance - b.distance;
-        });
+        };
       } else if (sort === 'price') {
         // Camps without a price for the chosen ages and weeks go last, A–Z —
         // most camps haven't posted prices yet, and they shouldn't vanish.
         const price = new Map(
-          sorted.map((entry) => [entry.camp.id, cheapestFittingWeeklyPrice(entry.camp, pill.ages, selectedWeeks)]),
+          list.map((entry) => [entry.camp.id, cheapestFittingWeeklyPrice(entry.camp, pill.ages, selectedWeeks)]),
         );
-        sorted.sort((a, b) => {
+        byMode = (a, b) => {
           const pa = price.get(a.camp.id) ?? null;
           const pb = price.get(b.camp.id) ?? null;
-          if (pa === null && pb === null) return a.camp.name.localeCompare(b.camp.name);
+          if (pa === null && pb === null) return byName(a, b);
           if (pa === null) return 1;
           if (pb === null) return -1;
-          return pa - pb || a.camp.name.localeCompare(b.camp.name);
-        });
-      } else {
-        sorted.sort((a, b) => a.camp.name.localeCompare(b.camp.name));
+          return pa - pb || byName(a, b);
+        };
       }
 
-      return sorted;
+      // Whatever the sort, camps with dates for the summer parents are
+      // planning come first; the chosen order applies within each group.
+      const season = String(ACTIVE_SEASON_YEAR);
+      const current = new Set(
+        list
+          .filter((entry) => entry.camp.camp_sessions?.some((s) => s.start_date?.startsWith(season)))
+          .map((entry) => entry.camp.id),
+      );
+      const tier = (entry: Entry) => (current.has(entry.camp.id) ? 0 : 1);
+
+      return [...list].sort((a, b) => tier(a) - tier(b) || byMode(a, b));
     },
     [sort, pill.ages, selectedWeeks]
   );
