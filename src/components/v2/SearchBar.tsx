@@ -31,6 +31,8 @@ interface SearchBarProps {
   onFiltersChange: (patch: Partial<Filters>) => void;
   availableInterests: string[];
   onClearAll: () => void;
+  /** Show the "Registration open" switch: only once some camp has a date. */
+  showRegistrationFilter?: boolean;
 }
 
 const toggle = <T,>(list: T[], value: T) =>
@@ -56,6 +58,7 @@ export default function SearchBar({
   onFiltersChange,
   availableInterests,
   onClearAll,
+  showRegistrationFilter = false,
 }: SearchBarProps) {
   const [open, setOpen] = useState<ChipId | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -112,7 +115,8 @@ export default function SearchBar({
     interests: () => onFiltersChange({ interests: [] }),
   };
 
-  const anySet = Object.values(summaries).some(Boolean) || query.trim().length > 0;
+  const anySet =
+    Object.values(summaries).some(Boolean) || query.trim().length > 0 || filters.registrationOpen;
 
   // --- handlers ------------------------------------------------------------
   const toggleAge = (age: number) => {
@@ -221,6 +225,31 @@ export default function SearchBar({
             </button>
           );
         })}
+
+        {/* A switch, not a menu: on or off. Shown in the set style when on.
+            Hidden until some camp has a registration date, unless it's on. */}
+        {(showRegistrationFilter || filters.registrationOpen) && (
+        <button
+          type="button"
+          aria-pressed={filters.registrationOpen}
+          onClick={() => {
+            const next = !filters.registrationOpen;
+            onFiltersChange({ registrationOpen: next });
+            capture('registration_open_filter_toggled', { action: next ? 'added' : 'removed' });
+          }}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+            filters.registrationOpen
+              ? 'border-2 border-gray-900 bg-white font-semibold text-gray-900'
+              : 'border border-gray-300 font-medium text-gray-700 hover:border-gray-400'
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 rounded-full ${filters.registrationOpen ? 'bg-green-600' : 'bg-green-500/70'}`}
+          />
+          Registration open
+        </button>
+        )}
 
         {anySet && (
           <button

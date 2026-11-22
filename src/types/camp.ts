@@ -61,6 +61,8 @@ export interface Camp {
   camp_interests?: CampInterest[];
   /** Every in-area site this camp runs at (migration 007). Absent before it. */
   camp_locations?: CampLocation[];
+  /** Registration windows per summer (migration 010). Absent before it. */
+  camp_registrations?: CampRegistration[];
   /** Provenance for the camp row itself; sessions carry their own. */
   source_url?: string | null;
   season_year?: number | null;
@@ -68,6 +70,20 @@ export interface Camp {
   /** When the row last changed; drives the "Recently updated" sort. */
   updated_at?: string | null;
   verification_status?: VerificationStatus;
+}
+
+/** When a summer's registration opens (migration 010). Dates are local Richmond time. */
+export interface CampRegistration {
+  season_year: number;
+  opens_on?: string | null;
+  opens_time?: string | null;
+  priority_opens_on?: string | null;
+  priority_opens_time?: string | null;
+  priority_note?: string | null;
+  opens_note?: string | null;
+  registration_url?: string | null;
+  status: 'unknown' | 'upcoming' | 'open' | 'waitlist' | 'full';
+  fills_fast: boolean;
 }
 
 export interface CampMarker {

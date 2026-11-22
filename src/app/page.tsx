@@ -20,6 +20,7 @@ import {
   type Filters,
 } from '@/lib/campFilters';
 import type { Camp } from '@/types/camp';
+import { currentRegistration, isRegistrationOpen } from '@/lib/registration';
 import RecommendedSection from '@/components/v2/RecommendedSection';
 import { capture, REC_FLAG } from '@/lib/analytics';
 import { useFeatureFlag } from '@/lib/useFeatureFlag';
@@ -269,6 +270,7 @@ export default function Home() {
   const radiusActive = zipCenter !== null;
 
   const weekOptions = useMemo(() => buildWeekOptions(allCamps), [allCamps]);
+  const hasRegistrationDates = useMemo(() => allCamps.some((c) => currentRegistration(c) !== null), [allCamps]);
   const selectedWeeks = useMemo(
     () => weekOptions.filter((week) => pill.weeks.includes(week.key)),
     [weekOptions, pill.weeks]
@@ -296,7 +298,8 @@ export default function Home() {
         (camp) =>
           matchesQuery(camp) &&
           campMatchesAges(camp, pill.ages, pill.matchAllAges) &&
-          campMatchesWeeks(camp, selectedWeeks)
+          campMatchesWeeks(camp, selectedWeeks) &&
+          (!filters.registrationOpen || isRegistrationOpen(camp))
       )
       .map((camp) => {
         // Distance is to the nearest site: a parent in Glen Allen cares that
@@ -304,7 +307,7 @@ export default function Home() {
         const site = nearestSite(camp, zipCenter);
         return { camp, coords: site.coords, distance: site.distance, site };
       });
-  }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter, matchesQuery]);
+  }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter, matchesQuery, filters.registrationOpen]);
 
   // Default: newest information first; nearest first once a zip gives a starting point.
   const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'updated');
@@ -539,6 +542,7 @@ export default function Home() {
               onFiltersChange={patchFilters}
               availableInterests={availableInterests}
               onClearAll={clearAll}
+              showRegistrationFilter={hasRegistrationDates}
             />
           ) : (
             // Same height as the bar, so nothing jumps when saved filters hydrate.

@@ -6,6 +6,8 @@ import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
 import SiteHeader from '@/components/SiteHeader';
+import RegistrationPlan from '@/components/RegistrationPlan';
+import type { CampRegistration } from '@/types/camp';
 
 interface Camp {
   id: string;
@@ -33,6 +35,8 @@ interface Camp {
     tag?: string;
     interest_name?: string;
   }>;
+  /** When registration opens, per summer (migration 010). */
+  camp_registrations?: CampRegistration[];
 }
 
 interface SavedSession {
@@ -346,6 +350,8 @@ export default function SavedCampsPage() {
               </div>
             ) : (
               <>
+                <RegistrationPlan camps={camps} />
+
                 {/* Saved Camps Section */}
                 {camps.length > 0 && (
                   <div className="mb-12">

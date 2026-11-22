@@ -150,3 +150,45 @@ export function checkSession(
 export function isBlank(row: SessionDraft): boolean {
   return Object.entries(row).every(([key, value]) => key === 'location_id' || !value.trim());
 }
+
+/** "When does registration open?" on the update form. All optional. */
+export interface RegistrationDraft {
+  opens_on: string;
+  opens_time: string;
+  note: string;
+  url: string;
+}
+
+export const EMPTY_REGISTRATION: RegistrationDraft = { opens_on: '', opens_time: '', note: '', url: '' };
+
+export function isRegistrationBlank(r: RegistrationDraft): boolean {
+  return !r.opens_on.trim() && !r.opens_time.trim() && !r.note.trim() && !r.url.trim();
+}
+
+/**
+ * Registration for `seasonYear` usually opens the autumn or winter before it,
+ * so any date from September 1 of the year before through the summer is fine.
+ */
+export function checkRegistration(
+  r: RegistrationDraft,
+  seasonYear: number,
+): {
+  errors: FieldErrors<keyof RegistrationDraft>;
+  clean: { opens_on: string | null; opens_time: string | null; note: string | null; url: string | null } | null;
+} {
+  const errors: FieldErrors<keyof RegistrationDraft> = {};
+  const date = r.opens_on.trim();
+  const time = r.opens_time.trim();
+  const url = r.url.trim();
+  const note = r.note.trim();
+  if (date && (!DATE_RE.test(date) || date < `${seasonYear - 1}-09-01` || date > `${seasonYear}-08-31`)) {
+    errors.opens_on = `Use a date between Sep ${seasonYear - 1} and summer ${seasonYear}.`;
+  }
+  if (time && !TIME_RE.test(time)) errors.opens_time = 'Use a time like 9:00 AM.';
+  if (time && !date) errors.opens_time = 'Add the date too.';
+  if (url && !/^https?:\/\/\S+\.\S+/.test(url)) errors.url = 'Paste the full link, starting with https://';
+  if (note.length > 200) errors.note = 'Keep this under 200 characters.';
+  if (url.length > 500) errors.url = 'That link is too long.';
+  if (Object.keys(errors).length) return { errors, clean: null };
+  return { errors, clean: { opens_on: date || null, opens_time: time || null, note: note || null, url: url || null } };
+}

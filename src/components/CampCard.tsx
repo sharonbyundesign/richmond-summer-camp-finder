@@ -5,6 +5,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { capture } from '@/lib/analytics';
 import { cityFromLocation, ageRange, sessionRange } from '@/lib/campCardFormat';
+import { currentRegistration, registrationPill, type RegistrationState } from '@/lib/registration';
+import type { CampRegistration } from '@/types/camp';
+
+/** Registration pill colors: open is the call to act; full is quiet. */
+const REG_PILL_STYLE: Record<RegistrationState, string> = {
+  open: 'bg-green-100 text-green-800',
+  opens: 'bg-blue-50 text-blue-800',
+  waitlist: 'bg-amber-50 text-amber-900',
+  full: 'bg-gray-100 text-gray-600',
+  note: 'bg-gray-100 text-gray-700',
+};
 import { categoryIcon, toCategories } from '@/lib/interest-categories';
 import { campInterestImageUrl } from '@/lib/campInterestImage';
 import { summarizeTrust, trustBadge } from '@/lib/trust';
@@ -63,6 +74,8 @@ interface CampCardProps {
       tag?: string;
       interest_name?: string;
     }>;
+    /** When registration opens, per summer (migration 010). */
+    camp_registrations?: CampRegistration[];
   };
 }
 
@@ -162,9 +175,15 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
         ? `${sites.nearest} (1 of ${sites.count})`
         : `${sites.count} locations`
       : cityFromLocation(camp.location);
-  const ages = ageRange(camp.camp_sessions);
-  const dates = sessionRange(camp.camp_sessions);
-  const sessionCount = camp.camp_sessions?.length ?? 0;
+  // One summer only — the latest with sessions — so a camp with last year's
+  // and next year's dates doesn't read "Jun 22, 2026 – Jul 29, 2027".
+  const latestYear = Math.max(0, ...(camp.camp_sessions ?? []).map((s) => Number(s.start_date?.slice(0, 4)) || 0));
+  const seasonSessions = (camp.camp_sessions ?? []).filter((s) => s.start_date?.startsWith(String(latestYear)));
+  const ages = ageRange(seasonSessions);
+  const dates = sessionRange(seasonSessions);
+  const sessionCount = seasonSessions.length;
+  const registration = currentRegistration(camp);
+  const regPill = registrationPill(registration);
   // One badge, from the weakest row behind what this card claims.
   const badge = trustBadge(summarizeTrust(camp));
 
@@ -183,7 +202,9 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
       }`}
     >
       {/* Photo, with the interest tag and save control floating over it */}
-      <div className="relative h-44 w-full flex-shrink-0 bg-gray-100">
+      {/* Half height: these are stock photos by interest, not the camp's own,
+          so they set the mood without taking the card. */}
+      <div className="relative h-[88px] w-full flex-shrink-0 bg-gray-100">
         {image ? (
           <Image
             src={image}
@@ -287,6 +308,21 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
               {dates && ` · ${dates}`}
             </span>
           </p>
+        )}
+
+        {(regPill || registration?.fills_fast) && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {regPill && (
+              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${REG_PILL_STYLE[regPill.state]}`}>
+                {regPill.text}
+              </span>
+            )}
+            {registration?.fills_fast && regPill?.state !== 'full' && (
+              <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                Fills fast
+              </span>
+            )}
+          </div>
         )}
 
         {/* The card has one action: open the camp. "Visit website" and

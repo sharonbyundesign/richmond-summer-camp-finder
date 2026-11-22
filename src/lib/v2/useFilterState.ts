@@ -32,6 +32,7 @@ function sanitize(raw: unknown): Filters {
           PRICE_BRACKET_OPTIONS.some((o) => o.value === p),
         )
       : [],
+    registrationOpen: value.registrationOpen === true,
   };
 }
 

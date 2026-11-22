@@ -42,6 +42,8 @@ export interface Filters {
   priceBrackets: PriceBracket[];
   zip: string;
   radius: number; // miles; only applied when zip resolves to a centroid
+  /** Only camps whose registration for the coming summer is open now. */
+  registrationOpen: boolean;
 }
 
 export interface LatLng {
@@ -78,6 +80,7 @@ export function emptyFilters(): Filters {
     priceBrackets: [],
     zip: '',
     radius: DEFAULT_RADIUS,
+    registrationOpen: false,
   };
 }
 
@@ -433,6 +436,7 @@ export function parseFiltersFromParams(params: ParamsLike): Filters {
     priceBrackets,
     zip: (params.get('zip') || '').trim(),
     radius,
+    registrationOpen: params.get('regOpen') === '1',
   };
 }
 
@@ -448,6 +452,7 @@ export function filtersToSearchParams(filters: Filters): URLSearchParams {
     params.set('zip', filters.zip);
     if (filters.radius !== DEFAULT_RADIUS) params.set('radius', String(filters.radius));
   }
+  if (filters.registrationOpen) params.set('regOpen', '1');
   return params;
 }
 
@@ -458,7 +463,8 @@ export function countActiveFilters(filters: Filters): number {
     filters.weeks.length +
     filters.sessionTypes.length +
     filters.priceBrackets.length +
-    (filters.zip ? 1 : 0)
+    (filters.zip ? 1 : 0) +
+    (filters.registrationOpen ? 1 : 0)
   );
 }
 
