@@ -605,8 +605,8 @@ export default function Home() {
             <>
               {showRecommended && <RecommendedSection camps={camps} distances={distanceById} />}
 
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-gray-600">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <p className="py-1 text-gray-600">
                   {listed.length === 0
                     ? undatedListed.length > 0
                       ? // "Try adjusting your filters" would be a lie sitting directly
@@ -633,7 +633,8 @@ export default function Home() {
                   )}
                 </p>
 
-                <div className="inline-flex items-center gap-2">
+                {/* Two columns so the zip field lines up under the dropdown. */}
+                <div className="grid grid-cols-[auto_auto] items-center gap-x-2 gap-y-2">
                   <label htmlFor="sort" className="text-sm text-gray-600">
                     Sort
                   </label>
@@ -661,15 +662,13 @@ export default function Home() {
                     <option value="price" className="text-gray-900">Price: low to high</option>
                     <option value="updated" className="text-gray-900">Recently updated</option>
                   </select>
-                </div>
-              </div>
 
-              {/* Distance needs a starting point: ask for it right here rather
-                  than warn. Same zip as the Location chip, so it drives the
-                  map, the radius and the chip too. */}
-              {sort === 'distance' && !radiusActive && (
-                <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
-                  <label htmlFor="sort-zip">Distance from</label>
+                  {/* Distance needs a starting point: ask for it right under the
+                      dropdown rather than warn. Same zip as the Location chip, so
+                      it drives the map, the radius and the chip too. */}
+                  {sort === 'distance' && !radiusActive && (
+                    <>
+                  <label htmlFor="sort-zip" className="sr-only">Distance from zip code</label>
                   <input
                     ref={sortZipRef}
                     id="sort-zip"
@@ -684,13 +683,17 @@ export default function Home() {
                       if (zip.length === 5) capture('zip_filter_applied', { radius_miles: pill.radius, source: 'sort' });
                     }}
                     aria-invalid={zipStatus === 'notfound'}
-                    className="w-36 rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    className="col-start-2 w-full rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   />
                   {zipStatus === 'notfound' && (
-                    <span role="alert" className="text-red-600">We couldn&apos;t find that zip code.</span>
+                    <span role="alert" className="col-start-2 text-xs text-red-600">
+                      We couldn&apos;t find that zip code.
+                    </span>
+                  )}
+                    </>
                   )}
                 </div>
-              )}
+              </div>
 
               <p className="mb-4 text-xs text-gray-400">
                 Camp details may change — always confirm dates and prices with the camp.
