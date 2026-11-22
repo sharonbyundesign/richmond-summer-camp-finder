@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import { loadCampDetail } from '@/lib/campDetail';
 import { toCategories } from '@/lib/interest-categories';
 import { ageRange, cityFromLocation } from '@/lib/campCardFormat';
+import { loadCheckinSummary } from '@/lib/checkinSummary';
+import type { CheckinSummary } from '@/lib/checkins';
+import { emailConfigured } from '@/lib/email';
 import CampDetailClient from './CampDetailClient';
 
 export const dynamic = 'force-dynamic';
@@ -53,8 +56,32 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function CampPage({ params }: Params) {
+/**
+ * Local preview of the check-in section before email and migration 009 are
+ * set up: `?checkins=preview` on a dev server shows the invite and a sample
+ * summary, marked as one. Ignored in production.
+ */
+const PREVIEW_SUMMARY: CheckinSummary = {
+  count: 7,
+  wouldReturn: 6,
+  tags: [
+    { id: 'great_counselors', label: 'Great counselors', count: 5 },
+    { id: 'made_friends', label: 'Made friends', count: 4 },
+    { id: 'pricey', label: 'Pricey for what it was', count: 2 },
+  ],
+  comments: [
+    { text: 'SAMPLE — preview only. Our son came home happy every day and still talks about the river trip.', would_return: true, attended_year: 2026 },
+    { text: 'SAMPLE — preview only. Fun week, but pickup was chaotic on the first two days.', would_return: false, attended_year: 2025 },
+  ],
+};
+
+export default async function CampPage({
+  params,
+  searchParams,
+}: Params & { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
+  const preview =
+    process.env.NODE_ENV !== 'production' && (await searchParams)?.checkins === 'preview';
   const result = await loadCampDetail(id);
 
   // A missing camp is a 404, not a page that renders an error — otherwise
@@ -64,5 +91,15 @@ export default async function CampPage({ params }: Params) {
     throw new Error(result.error);
   }
 
-  return <CampDetailClient initialCamp={result.camp as never} />;
+  // Parents' check-ins: the summary, and whether new ones can be confirmed.
+  const checkinSummary = preview ? PREVIEW_SUMMARY : await loadCheckinSummary(id);
+  const checkinsEnabled = preview || (emailConfigured() && checkinSummary !== null);
+
+  return (
+    <CampDetailClient
+      initialCamp={result.camp as never}
+      checkinSummary={checkinSummary}
+      checkinsEnabled={checkinsEnabled}
+    />
+  );
 }

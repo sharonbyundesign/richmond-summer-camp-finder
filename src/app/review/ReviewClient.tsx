@@ -30,6 +30,17 @@ type Session = {
   verification_status?: string | null;
 };
 
+type PendingComment = {
+  id: string;
+  camp_id: string;
+  attended_year: number;
+  would_return: boolean;
+  tags: string[] | null;
+  comment: string;
+  created_at: string;
+  camps: { name: string } | null;
+};
+
 type Source = { id: string; url: string; url_type: string; notes: string | null };
 
 /** A session the extractor staged, waiting for someone to rule on it. */
@@ -118,6 +129,39 @@ export default function ReviewClient() {
   const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [ruling, setRuling] = useState<Record<string, string>>({});
+  /** Parent comments waiting on a ruling (migration 009). */
+  const [comments, setComments] = useState<PendingComment[]>([]);
+
+  const loadComments = useCallback(async () => {
+    const response = await fetch('/api/review/checkins');
+    if (!response.ok) return;
+    const data = await response.json();
+    setComments(data.comments ?? []);
+  }, []);
+
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  const ruleComment = async (id: string, action: 'approve' | 'reject') => {
+    if (!reviewer.trim()) {
+      setRuling((r) => ({ ...r, [id]: 'Enter your name below first' }));
+      return;
+    }
+    setBusy(id);
+    const response = await fetch('/api/review/checkins', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, action, reviewed_by: reviewer.trim() }),
+    });
+    setBusy(null);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setRuling((r) => ({ ...r, [id]: data.error ?? 'Failed' }));
+      return;
+    }
+    setComments((c) => c.filter((x) => x.id !== id));
+  };
 
   useEffect(() => {
     try {
@@ -304,6 +348,46 @@ export default function ReviewClient() {
           under your name — so only enter dates the camp actually publishes for {SEASON}.
         </p>
       </header>
+
+      {comments.length > 0 && (
+        <section className="mx-6 mt-6 rounded-xl border border-purple-200 bg-purple-50/60 p-5">
+          <h2 className="text-sm font-semibold text-gray-900">Parent comments waiting ({comments.length})</h2>
+          <p className="mt-1 text-xs text-gray-600">
+            Approve every comment that follows the rules, positive or negative. Reject one that names a child or
+            staff member, isn&rsquo;t about the camp, is abusive, or reads as an ad or as written by the camp.
+            Rejecting keeps the parent&rsquo;s answer and tags.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {comments.map((c) => (
+              <li key={c.id} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
+                <p className="text-gray-900">&ldquo;{c.comment}&rdquo;</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {c.camps?.name ?? 'Camp'} · summer {c.attended_year} ·{' '}
+                  {c.would_return ? 'would send again' : 'would not send again'}
+                  {c.tags?.length ? ` · ${c.tags.join(', ')}` : ''}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => ruleComment(c.id, 'approve')}
+                    disabled={busy === c.id}
+                    className="rounded-md bg-green-600 px-3 py-1 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => ruleComment(c.id, 'reject')}
+                    disabled={busy === c.id}
+                    className="rounded-md border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                  {ruling[c.id] && <span className="text-xs text-red-700">{ruling[c.id]}</span>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="grid gap-6 p-6 lg:grid-cols-[320px_1fr]">
         <aside className="max-h-[80vh] overflow-y-auto rounded-xl border border-gray-200 bg-white">

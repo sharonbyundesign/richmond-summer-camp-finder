@@ -57,6 +57,28 @@ export default function TermsPage() {
         remove your camp&rsquo;s listing at any time, email {EMAIL}.
       </p>
 
+      <LegalHeading>Parent check-ins</LegalHeading>
+      <p>
+        Parents can say how a camp went: whether they&rsquo;d send their child again, a few set tags, and
+        an optional short comment. A check-in counts only after you confirm it from your email, and a
+        camp&rsquo;s summary shows only once at least five parents have checked in. When you send one,
+        you confirm that your child attended that camp that summer, and you give us permission to
+        publish your answers and comment on Scouty without your name or email.
+      </p>
+      <p>Comments are reviewed before they appear. We publish every comment that follows these rules, positive or negative:</p>
+      <ul className="list-disc space-y-1 pl-6">
+        <li>it&rsquo;s about your own family&rsquo;s experience at that camp</li>
+        <li>it doesn&rsquo;t name or describe a child or a staff member</li>
+        <li>it isn&rsquo;t abusive, and doesn&rsquo;t include contact details, links or ads</li>
+        <li>it isn&rsquo;t written by, or on behalf of, the camp or a competitor</li>
+      </ul>
+      <p>
+        We don&rsquo;t hide check-ins for being negative, and camps can&rsquo;t remove them. A camp that
+        thinks a check-in breaks these rules can ask us to look at it at {EMAIL}. Check-ins are the
+        opinions of the parents who send them, not Scouty&rsquo;s. We never pay for check-ins or reward
+        positive ones.
+      </p>
+
       <LegalHeading>Saved camps and emails</LegalHeading>
       <p>
         Camps and sessions you save are kept in your own browser, not on our servers, so clearing your

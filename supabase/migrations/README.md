@@ -33,6 +33,7 @@ work done since.
 | 6 | `006_camp_notify_requests` | `camp_notify_requests` — per-camp "notify me when the dates are posted". Independent of 1-5. |
 | 7 | `007_camp_locations` | `camp_locations` + `camp_sessions.location_id` — where each session runs. Backfills one site per geocoded camp. |
 | 8 | `008_camp_submissions` | `camp_submissions` + `camp_updates.submission_id` — dates a camp sends through `/camps/[id]/update`. Replaces `apply_camp_update()` so an approved submission publishes as `camp_confirmed`. Needs 003 and 007. |
+| 9 | `009_camp_checkins` | `camp_checkins` — parent check-ins (would send again, tags, optional comment). Count once confirmed by email; comments show once approved. Independent of 1-8. |
 
 Roll back in reverse: **004 → 003 → 002 → 001**. 003 must come down before 002
 (`camp_updates.source_id` references `camp_sources`). 005 stands alone and can
@@ -47,6 +48,7 @@ key, and the whole set is one feature — apply all four.
 
 | Rolling back | Loses |
 |---|---|
+| 009 | **Every parent check-in.** Unreproducible — export first. |
 | 008 | **Every submission's contact details.** Its proposals stay in `camp_updates`; `apply_camp_update()` goes back to 003's. |
 | 006 | **Every notify request.** Unreproducible — export first. |
 | 005 | **Every signup.** Unreproducible — export the table first. |

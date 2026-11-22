@@ -122,7 +122,11 @@ export type EventName =
   | 'radius_changed'
   // Camps sending their own dates: the link on a camp page, and a sent form.
   | 'camp_update_link_clicked'
-  | 'camp_update_submitted';
+  | 'camp_update_submitted'
+  // Parent check-ins: opened the form, sent it, confirmed by email.
+  | 'checkin_started'
+  | 'checkin_submitted'
+  | 'checkin_confirmed';
 
 export function capture(event: EventName, properties?: Record<string, unknown>) {
   if (!started) return;
