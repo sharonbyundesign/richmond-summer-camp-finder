@@ -112,7 +112,14 @@ export type EventName =
   // Card click-through. Not in the beta taxonomy, but the rec test needs a like-for-like
   // baseline: without it, rec_card_clicked has no ordinary-card counterpart to compare to.
   | 'card_clicked'
-  | 'map_pin_clicked';
+  | 'map_pin_clicked'
+  // The filters the July data couldn't see (findings doc, Nov 2026): what
+  // parents type, and whether the Price and Full/half day chips the user test
+  // asked for get used.
+  | 'search_performed'
+  | 'price_filter_toggled'
+  | 'day_type_filter_toggled'
+  | 'radius_changed';
 
 export function capture(event: EventName, properties?: Record<string, unknown>) {
   if (!started) return;
