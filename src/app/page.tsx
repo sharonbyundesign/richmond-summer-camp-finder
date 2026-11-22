@@ -11,7 +11,7 @@ import SearchBar from '@/components/v2/SearchBar';
 import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
 import { useFilterState } from '@/lib/v2/useFilterState';
-import { buildWeekOptions, campMatchesAges, campMatchesWeeks } from '@/lib/v2/weeks';
+import { buildWeekOptions, campMatchesAges, campMatchesWeeks, cheapestFittingWeeklyPrice } from '@/lib/v2/weeks';
 import { lookupZip, campSites, nearestSite, haversineMiles } from '@/lib/v2/geo';
 import {
   emptyFilters,
@@ -26,7 +26,7 @@ import { useFeatureFlag } from '@/lib/useFeatureFlag';
 
 const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
-type SortMode = 'distance' | 'az';
+type SortMode = 'distance' | 'az' | 'price';
 
 const DESKTOP_QUERY = '(min-width: 768px)';
 
@@ -318,13 +318,27 @@ export default function Home() {
           if (b.distance === null) return -1;
           return a.distance - b.distance;
         });
+      } else if (sort === 'price') {
+        // Camps without a price for the chosen ages and weeks go last, A–Z —
+        // most camps haven't posted prices yet, and they shouldn't vanish.
+        const price = new Map(
+          sorted.map((entry) => [entry.camp.id, cheapestFittingWeeklyPrice(entry.camp, pill.ages, selectedWeeks)]),
+        );
+        sorted.sort((a, b) => {
+          const pa = price.get(a.camp.id) ?? null;
+          const pb = price.get(b.camp.id) ?? null;
+          if (pa === null && pb === null) return a.camp.name.localeCompare(b.camp.name);
+          if (pa === null) return 1;
+          if (pb === null) return -1;
+          return pa - pb || a.camp.name.localeCompare(b.camp.name);
+        });
       } else {
         sorted.sort((a, b) => a.camp.name.localeCompare(b.camp.name));
       }
 
       return sorted;
     },
-    [sort]
+    [sort, pill.ages, selectedWeeks]
   );
 
   /**
@@ -621,6 +635,7 @@ export default function Home() {
                   >
                     <option value="distance" className="text-gray-900">Distance</option>
                     <option value="az" className="text-gray-900">A–Z</option>
+                    <option value="price" className="text-gray-900">Price: low to high</option>
                   </select>
                 </div>
               </div>
