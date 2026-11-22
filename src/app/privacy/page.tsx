@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <LegalPage title="Privacy Policy">
-      <p className="text-gray-600">Effective date: November 21, 2026</p>
+      <p className="text-gray-600">Effective date: November 22, 2026</p>
 
       <p>
         Scouty (&ldquo;we,&rdquo; &ldquo;us&rdquo;) is a free tool that helps Richmond-area families
@@ -36,11 +36,12 @@ export default function PrivacyPolicyPage() {
           Approximate location (city level, derived from your IP address), browser type, and device type
         </li>
       </ul>
-      <p>Text you type into input fields is masked in session recordings and is not captured.</p>
+      <p>Text you type into input fields is masked in session recordings.</p>
       <p>
         Search and filter inputs. Filters you apply (such as camp session dates, price ranges, or
-        children&rsquo;s ages) are recorded as anonymous usage data. We do not link this information to
-        your identity, and we do not knowingly collect any personal information from or about children.
+        children&rsquo;s ages) and the words you type in the camp search box are recorded as anonymous
+        usage data, so we can see what families look for. We do not link this information to your
+        identity, and we do not knowingly collect any personal information from or about children.
       </p>
 
       <LegalHeading>Email addresses you give us</LegalHeading>
@@ -58,6 +59,12 @@ export default function PrivacyPolicyPage() {
           about, so we email you about that camp and not others.
         </li>
       </ul>
+      <p>
+        <strong>Camps sending us their dates</strong> — if you work for a camp and send its dates through
+        the camp&rsquo;s update form, we store your name, email, role, and any note, along with the dates
+        you send, so we can check the update and contact you about it. We also keep a one-way scrambled
+        form of your IP address (not the address itself), only to stop the form being flooded.
+      </p>
       <p>
         We use your address only to send what you asked for. We do not sell it, and we do not share
         it with advertisers. Addresses are stored in our database, hosted by Supabase on our behalf.

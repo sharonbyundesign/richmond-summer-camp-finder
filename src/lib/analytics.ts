@@ -37,10 +37,10 @@ export function initAnalytics() {
     // Session recording (Task 3). Also honoured by the project-level toggle in PostHog.
     disable_session_recording: false,
     session_recording: {
-      maskAllInputs: false,
-      // The zip box is the only free-text field; nothing here is sensitive, but keep
-      // password-ish inputs masked by default.
-      maskInputOptions: { password: true },
+      // Every input is masked, as the Privacy Policy promises: the site now has
+      // email fields (signup, Notify me) and a camp update form with names and
+      // emails, none of which belong in a replay.
+      maskAllInputs: true,
     },
   });
 

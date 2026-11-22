@@ -420,7 +420,11 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
             {status === 'sending' ? 'Sending…' : 'Send for review'}
           </button>
           <p className="text-xs text-gray-500">
-            We use your email only to ask about these dates.{' '}
+            By sending, you agree to our{' '}
+            <Link href="/terms" className="underline hover:text-gray-700">
+              Terms
+            </Link>
+            . We use your email only to ask about these dates.{' '}
             <a href={feedbackMailto(`Camp update: ${camp.name}`)} className="underline hover:text-gray-700">
               Questions? Email us
             </a>
