@@ -282,14 +282,13 @@ export default function SavedCampsPage() {
           wordmark instead of towering over it. */}
       <SiteHeader />
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 sm:pt-8 pb-4">
-        <h1 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
-          Saved Items
-        </h1>
-        <p className="mt-1 text-gray-600">Your favorite camps and sessions</p>
-      </div>
+      {/* The visible title said nothing the section headings below do not —
+          "Saved Camps (3)" already names the page. It stays as the document's
+          h1 for screen readers and crawlers, which still need one heading that
+          says what this page is; the wordmark above is the same everywhere. */}
+      <h1 className="sr-only">Saved Items</h1>
 
-      <div className="px-4 sm:px-6 lg:px-8 xl:px-12 pb-6 sm:pb-8">
+      <div className="px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8 xl:px-12 pb-6 sm:pb-8">
         {loading && (
           <>
             <div className="mb-4">
