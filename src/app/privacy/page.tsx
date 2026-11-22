@@ -60,6 +60,13 @@ export default function PrivacyPolicyPage() {
         </li>
       </ul>
       <p>
+        <strong>Parent check-ins</strong> — if you check in on a camp, we store your email, the camp,
+        the summer, your answers and any comment. We use your email only to send the one link that
+        confirms your check-in, and we never show it. Your answers and an approved comment appear on
+        the camp&rsquo;s page without your name or email. We also keep a one-way scrambled form of your
+        IP address, only to stop the form being flooded.
+      </p>
+      <p>
         <strong>Camps sending us their dates</strong> — if you work for a camp and send its dates through
         the camp&rsquo;s update form, we store your name, email, role, and any note, along with the dates
         you send, so we can check the update and contact you about it. We also keep a one-way scrambled

@@ -22,6 +22,8 @@ import { sessionLocation, visibleLocations, type CampLocation } from '@/lib/loca
 import { siteLabel } from '@/lib/v2/geo';
 import NotifyMeButton from '@/components/NotifyMeButton';
 import SiteHeader from '@/components/SiteHeader';
+import ParentCheckins from '@/components/ParentCheckins';
+import type { CheckinSummary } from '@/lib/checkins';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
 import { campFacts } from '@/lib/campFacts';
@@ -96,7 +98,17 @@ function getSessionStatus(session: CampSession, todayNY: string): SessionStatus 
   return 'upcoming';
 }
 
-export default function CampDetailClient({ initialCamp }: { initialCamp: Camp }) {
+export default function CampDetailClient({
+  initialCamp,
+  checkinSummary = null,
+  checkinsEnabled = false,
+}: {
+  initialCamp: Camp;
+  /** Parents' check-ins (migration 009); null when there are none to read. */
+  checkinSummary?: CheckinSummary | null;
+  /** New check-ins can be confirmed by email. */
+  checkinsEnabled?: boolean;
+}) {
   // Rendered on the server with the camp already in hand, so the markup a
   // crawler receives is the finished page rather than a loading state. The
   // state below is kept so the existing loading/error branches still hold for
@@ -396,6 +408,13 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
             </div>
           </div>
         </div>
+
+        <ParentCheckins
+          campId={camp.id}
+          campName={camp.name}
+          summary={checkinSummary}
+          enabled={checkinsEnabled}
+        />
 
         {/* Sessions Section — hidden entirely when no sessions have been added yet */}
         {sortedSessions.length > 0 && (
