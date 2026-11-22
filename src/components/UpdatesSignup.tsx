@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useId, useState } from 'react';
 import { capture } from '@/lib/analytics';
 
@@ -121,7 +122,7 @@ export default function UpdatesSignup({
             className={
               inline
                 ? 'min-w-0 w-44 lg:w-60 xl:w-72 rounded-full border border-gray-300 px-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
-                : 'min-w-0 flex-1 rounded-md border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                : 'min-w-0 flex-1 rounded-full border border-gray-300 px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
             }
           />
           <button
@@ -130,7 +131,7 @@ export default function UpdatesSignup({
             className={
               inline
                 ? 'shrink-0 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
-                : 'shrink-0 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
+                : 'shrink-0 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60'
             }
           >
             {status === 'submitting' ? 'Adding…' : 'Get updates'}
@@ -143,14 +144,15 @@ export default function UpdatesSignup({
           Something went wrong. Please check your email and try again.
         </p>
       ) : (
-        // The inline footer form carries no sub-line: the footer is sticky on
-        // desktop, and a second line of reassurance there costs more screen
-        // than it earns. The stacked version has room for it.
-        !inline && (
-          <p className="mt-2 text-xs text-gray-500">
-            New camps and news, now and then. No spam.
-          </p>
-        )
+        // What they're signing up for, said before they do — both placements,
+        // including the sticky footer, where it costs one short line. Worded
+        // to match the Notify me dialog so the two promises read as one policy.
+        <p className={`text-xs text-gray-500 ${inline ? 'mt-1.5 text-center sm:whitespace-nowrap lg:text-left' : 'mt-2'}`}>
+          Occasional camp news. Unsubscribe anytime.{' '}
+          <Link href="/privacy" className="whitespace-nowrap underline hover:text-gray-700">
+            Privacy Policy
+          </Link>
+        </p>
       )}
     </div>
   );
