@@ -21,6 +21,7 @@ import TrustBadge from '@/components/TrustBadge';
 import { sessionLocation, visibleLocations, type CampLocation } from '@/lib/locations';
 import { siteLabel } from '@/lib/v2/geo';
 import NotifyMeButton from '@/components/NotifyMeButton';
+import SiteHeader from '@/components/SiteHeader';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
 import { campFacts } from '@/lib/campFacts';
@@ -222,6 +223,7 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
 
   return (
     <main className="min-h-screen bg-gray-50">
+      <SiteHeader />
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 py-6 sm:py-8">
         {/* Back Button */}
         <Link

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import CampCard from '@/components/CampCard';
-import SavedLink from '@/components/SavedLink';
+import SiteHeader from '@/components/SiteHeader';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import UpdatesSignup from '@/components/UpdatesSignup';
 import SearchBar from '@/components/v2/SearchBar';
@@ -505,22 +505,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header — fixed 64px (h-16); the sticky map's top offset depends on this. */}
-      <header
-        ref={headerRef}
-        className="sticky top-0 z-30 h-16 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70"
-      >
-        <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-baseline gap-2.5">
-            <h1 className="shrink-0 text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
-              Scouty
-            </h1>
-            <p className="truncate text-sm leading-tight text-gray-500">
-              Richmond summer camp finder
-            </p>
-          </div>
-          <SavedLink />
-        </div>
-      </header>
+      <SiteHeader ref={headerRef} logoIsHeading />
 
       {/* Search, then every filter as its own chip. There is no "More filters"
           modal any more: in the user test parents went looking for price and
