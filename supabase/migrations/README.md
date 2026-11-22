@@ -30,6 +30,7 @@ work done since.
 | 3 | `003_camp_updates` | `camp_updates` staging queue + `apply_camp_update()` |
 | 4 | `004_validation_constraints` | Hard `CHECK` constraints on ages, price, dates, coordinates |
 | 5 | `005_email_signups` | `email_signups` — the camp-updates email list. Independent of 1-4. |
+| 6 | `006_camp_notify_requests` | `camp_notify_requests` — per-camp "notify me when the dates are posted". Independent of 1-5. |
 | 7 | `007_camp_locations` | `camp_locations` + `camp_sessions.location_id` — where each session runs. Backfills one site per geocoded camp. |
 
 Roll back in reverse: **004 → 003 → 002 → 001**. 003 must come down before 002
@@ -45,6 +46,7 @@ key, and the whole set is one feature — apply all four.
 
 | Rolling back | Loses |
 |---|---|
+| 006 | **Every notify request.** Unreproducible — export first. |
 | 005 | **Every signup.** Unreproducible — export the table first. |
 | 004 | Nothing. Drops rules, keeps data. |
 | 003 | Every pending/approved/rejected proposal and its review notes. Rows already applied live in `camps`/`camp_sessions` and are safe. |

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <LegalPage title="Privacy Policy">
-      <p className="text-gray-600">Effective date: July 13, 2026</p>
+      <p className="text-gray-600">Effective date: November 21, 2026</p>
 
       <p>
         Scouty (&ldquo;we,&rdquo; &ldquo;us&rdquo;) is a free tool that helps Richmond-area families
@@ -43,6 +43,28 @@ export default function PrivacyPolicyPage() {
         your identity, and we do not knowingly collect any personal information from or about children.
       </p>
 
+      <LegalHeading>Email addresses you give us</LegalHeading>
+      <p>
+        Giving us your email is optional. There are two places you can do it:
+      </p>
+      <ul className="list-disc space-y-1 pl-6">
+        <li>
+          <strong>Camp updates</strong> — the sign-up in the footer and banner. We store your email
+          address and which of those places you used.
+        </li>
+        <li>
+          <strong>Notify me</strong> — on a camp&rsquo;s page, to hear when that camp posts its dates
+          for the coming season. We store your email address, the camp, and the season you asked
+          about, so we email you about that camp and not others.
+        </li>
+      </ul>
+      <p>
+        We use your address only to send what you asked for. We do not sell it, and we do not share
+        it with advertisers. Addresses are stored in our database, hosted by Supabase on our behalf.
+        Every email we send includes a link to unsubscribe, or you can ask us to remove you at{' '}
+        <a href="mailto:scoutyrva@gmail.com" className="text-blue-600 hover:underline">scoutyrva@gmail.com</a>.
+      </p>
+
       <LegalHeading>Cookies</LegalHeading>
       <p>
         We use cookies and similar technologies solely to support the analytics described above (for
@@ -53,12 +75,16 @@ export default function PrivacyPolicyPage() {
       <LegalHeading>How we use this information</LegalHeading>
       <p>
         We use analytics and session recordings only to understand how the site is used, find bugs, and
-        improve the experience during our beta period. We do not sell your information. Data is processed
-        by PostHog on our behalf under their privacy and security terms.
+        improve the experience during our beta period, and email addresses only as described above. We
+        do not sell your information. Analytics data is processed by PostHog, and email addresses are
+        stored by Supabase, each on our behalf under their privacy and security terms.
       </p>
 
       <LegalHeading>Data retention</LegalHeading>
       <p>Session recordings and analytics data are retained for 30 days and then deleted.</p>
+      <p>
+        We keep your email address until you unsubscribe or ask us to delete it.
+      </p>
 
       <LegalHeading>Your choices</LegalHeading>
       <p>

@@ -3,12 +3,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import FilterPanel from '@/components/FilterPanel';
 import CampCard from '@/components/CampCard';
 import SavedLink from '@/components/SavedLink';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import UpdatesSignup from '@/components/UpdatesSignup';
-import SearchPill from '@/components/v2/SearchPill';
+import SearchBar from '@/components/v2/SearchBar';
 import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
 import { useFilterState } from '@/lib/v2/useFilterState';
@@ -144,7 +143,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [availableInterests, setAvailableInterests] = useState<string[]>([]);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  /** Free-text search over name, place and description. Client-side: 108 camps. */
+  const [query, setQuery] = useState('');
   const [mobileMapOpen, setMobileMapOpen] = useState(false);
   // null = follow the default (distance once a zip is set, A–Z otherwise).
   const [sortOverride, setSortOverride] = useState<SortMode | null>(null);
@@ -273,12 +273,29 @@ export default function Home() {
     [weekOptions, pill.weeks]
   );
 
+  /**
+   * Case-insensitive match on the camp's name, address and description, so a
+   * parent can type "Art Factory", "Glen Allen" or "robotics". Every word must
+   * appear somewhere — "art midlothian" narrows rather than widens.
+   */
+  const matchesQuery = useCallback(
+    (camp: Camp) => {
+      const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+      if (words.length === 0) return true;
+      const haystack = [camp.name, camp.location, camp.description].filter(Boolean).join(' ').toLowerCase();
+      return words.every((word) => haystack.includes(word));
+    },
+    [query],
+  );
+
   /** Server-filtered camps, narrowed by age + weeks, then decorated with distance. */
   const decorated = useMemo(() => {
     return camps
       .filter(
         (camp) =>
-          campMatchesAges(camp, pill.ages, pill.matchAllAges) && campMatchesWeeks(camp, selectedWeeks)
+          matchesQuery(camp) &&
+          campMatchesAges(camp, pill.ages, pill.matchAllAges) &&
+          campMatchesWeeks(camp, selectedWeeks)
       )
       .map((camp) => {
         // Distance is to the nearest site: a parent in Glen Allen cares that
@@ -286,7 +303,7 @@ export default function Home() {
         const site = nearestSite(camp, zipCenter);
         return { camp, coords: site.coords, distance: site.distance, site };
       });
-  }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter]);
+  }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter, matchesQuery]);
 
   const sort: SortMode = sortOverride ?? (radiusActive ? 'distance' : 'az');
 
@@ -369,8 +386,8 @@ export default function Home() {
           campSites(camp).some((point) => haversineMiles(zipCenter!, point) <= pill.radius),
         )
       : undated;
-    return [...inRange].sort((a, b) => a.name.localeCompare(b.name));
-  }, [undated, showUndated, radiusActive, zipCenter, pill.radius]);
+    return inRange.filter(matchesQuery).sort((a, b) => a.name.localeCompare(b.name));
+  }, [undated, showUndated, radiusActive, zipCenter, pill.radius, matchesQuery]);
 
   /** How many of the shown camps serve every selected age, not just one of them. */
   const fitsAllCount = useMemo(
@@ -425,7 +442,9 @@ export default function Home() {
       had_weeks: pill.weeks.length > 0,
       had_zip: pill.zip.length > 0,
       had_modal_filters: modalFilterCount > 0,
+      had_query: query.trim().length > 0,
     });
+    setQuery('');
     setPill(EMPTY_PILL);
     setFilters(emptyFilters());
     setSortOverride(null);
@@ -469,105 +488,30 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Search pill + active selections */}
+      {/* Search, then every filter as its own chip. There is no "More filters"
+          modal any more: in the user test parents went looking for price and
+          full/half day even while those were behind it. */}
       <div className="border-b border-gray-200 bg-white px-4 pb-4 pt-5 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <SearchPill
-            state={pill}
-            onChange={setPill}
-            weekOptions={weekOptions}
-            zipStatus={zipStatus}
-            onSearch={() => {
-              /* Results are already live; the button just dismisses the popover. */
-            }}
-          />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {hydrated &&
-            pill.ages.map((age) => (
-              <Chip
-                key={`age-${age}`}
-                label={`Age ${age}`}
-                onRemove={() => setPill({ ...pill, ages: pill.ages.filter((value) => value !== age) })}
-              />
-            ))}
-
-          {hydrated &&
-            selectedWeeks.map((week) => (
-              <Chip
-                key={`week-${week.key}`}
-                label={week.label}
-                onRemove={() => setPill({ ...pill, weeks: pill.weeks.filter((key) => key !== week.key) })}
-              />
-            ))}
-
-          {hydrated && pill.zip.length > 0 && (
-            <Chip label={`${pill.zip} · ${pill.radius} mi`} onRemove={() => setPill({ ...pill, zip: '' })} />
-          )}
-
-          <button
-            type="button"
-            onClick={() => { setFiltersOpen(true); capture('more_filters_opened', { active_filter_count: modalFilterCount }); }}
-            className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
-              />
-            </svg>
-            More filters
-            {modalFilterCount > 0 && (
-              <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-xs font-semibold text-white">
-                {modalFilterCount}
-              </span>
-            )}
-          </button>
-
-          {(hasPillSelections || modalFilterCount > 0) && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-sm font-medium text-gray-600 underline underline-offset-2 hover:text-gray-900"
-            >
-              Clear all
-            </button>
+          {hydrated && filtersHydrated ? (
+            <SearchBar
+              state={pill}
+              onChange={setPill}
+              weekOptions={weekOptions}
+              zipStatus={zipStatus}
+              query={query}
+              onQueryChange={setQuery}
+              filters={filters}
+              onFiltersChange={patchFilters}
+              availableInterests={availableInterests}
+              onClearAll={clearAll}
+            />
+          ) : (
+            // Same height as the bar, so nothing jumps when saved filters hydrate.
+            <div className="h-[100px]" aria-hidden="true" />
           )}
         </div>
       </div>
-
-      {/* Filters modal — Interests, session type, and price only; age/weeks/zip live in the pill. */}
-      {filtersOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setFiltersOpen(false)} />
-          <aside className="fixed left-1/2 top-20 z-50 w-[92vw] max-w-4xl -translate-x-1/2">
-            <div className="relative max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl sm:p-6">
-              <button
-                onClick={() => setFiltersOpen(false)}
-                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm hover:text-gray-800"
-                aria-label="Close filters"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">More filters</h2>
-              <FilterPanel
-                filters={filters}
-                onChange={patchFilters}
-                availableInterests={availableInterests}
-                weeks={[]}
-                showAges={false}
-                showWeeks={false}
-                showDistance={false}
-              />
-            </div>
-          </aside>
-        </>
-      )}
 
       {/* Two-column shell. The list scrolls with the page; the map column sticks.
           On desktop the columns are separated by a draggable handle. */}
@@ -860,18 +804,5 @@ export default function Home() {
         </>
       )}
     </main>
-  );
-}
-
-function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-900 px-3.5 py-1.5 text-sm font-medium text-white">
-      {label}
-      <button type="button" onClick={onRemove} className="text-white/70 hover:text-white" aria-label={`Remove ${label}`}>
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </span>
   );
 }

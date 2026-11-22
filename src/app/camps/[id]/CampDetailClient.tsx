@@ -9,6 +9,7 @@ import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { feedbackMailto } from '@/lib/contact';
 import {
+  ACTIVE_SEASON_YEAR,
   formatCheckedAt,
   formatFieldList,
   lowConfidenceFields,
@@ -19,7 +20,9 @@ import {
 import TrustBadge from '@/components/TrustBadge';
 import { sessionLocation, visibleLocations, type CampLocation } from '@/lib/locations';
 import { siteLabel } from '@/lib/v2/geo';
+import NotifyMeButton from '@/components/NotifyMeButton';
 import type { VerificationStatus } from '@/types/database';
+import { parseLocalDate } from '@/lib/v2/weeks';
 
 interface CampSession {
   id?: string;
@@ -125,7 +128,11 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
   // The camp arrives from the server component; nothing to fetch here.
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    // parseLocalDate, not new Date: a bare YYYY-MM-DD is parsed as UTC
+    // midnight, which in Richmond renders as the day before.
+    const date = parseLocalDate(dateString);
+    if (!date) return dateString;
+    return date.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -399,6 +406,19 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                     />
                   </svg>
                 </a>
+              )}
+
+              {/* Only when we hold no dates for the season parents are planning
+                  — the moment someone most needs to hear back, and the one
+                  place the page has nothing better to offer them. */}
+              {trust.isStale && (
+                <div className="mt-4 border-t border-amber-200 pt-4">
+                  <NotifyMeButton
+                    campId={camp.id}
+                    campName={camp.name}
+                    seasonYear={ACTIVE_SEASON_YEAR}
+                  />
+                </div>
               )}
             </div>
           )}
