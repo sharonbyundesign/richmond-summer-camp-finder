@@ -170,7 +170,7 @@ function parseISODate(dateStr: string): Date | null {
 }
 
 /** Monday–Friday days from start to end inclusive; null without both dates. */
-function weekdaysBetween(start?: string | null, end?: string | null): number | null {
+export function weekdaysBetween(start?: string | null, end?: string | null): number | null {
   if (!start || !end) return null;
   const from = parseISODate(start);
   const to = parseISODate(end);
