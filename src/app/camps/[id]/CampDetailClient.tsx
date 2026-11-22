@@ -18,12 +18,16 @@ import {
   trustBadge,
 } from '@/lib/trust';
 import TrustBadge from '@/components/TrustBadge';
+import { sessionLocation, visibleLocations, type CampLocation } from '@/lib/locations';
+import { siteLabel } from '@/lib/v2/geo';
 import NotifyMeButton from '@/components/NotifyMeButton';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
 
 interface CampSession {
   id?: string;
+  /** The site this session runs at (migration 007). */
+  location_id?: string | null;
   name?: string;
   label?: string;
   start_date: string;
@@ -55,6 +59,8 @@ interface Camp {
   id: string;
   name: string;
   location?: string;
+  /** Every in-area site this camp runs at (migration 007). */
+  camp_locations?: CampLocation[];
   description?: string;
   website_url?: string;
   image_url?: string;
@@ -264,7 +270,29 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                 <TrustBadge badge={badge} />
               </div>
 
-              {camp.location && (
+              {/* Several sites: list them, because "one address" would tell a
+                  parent the camp only runs there. */}
+              {visibleLocations(camp).length > 1 ? (
+                <div className="mb-4 text-gray-600">
+                  <p className="flex items-center gap-2 font-medium text-gray-800">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {visibleLocations(camp).length} locations
+                  </p>
+                  <ul className="mt-1.5 space-y-0.5 pl-7 text-sm">
+                    {visibleLocations(camp).map((site) => (
+                      <li key={site.id}>
+                        <span className="font-medium text-gray-700">{siteLabel(site) ?? 'Location'}</span>
+                        {site.address && site.address !== siteLabel(site) && (
+                          <span className="text-gray-500"> · {site.address}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : camp.location && (
                 <p className="text-gray-600 mb-4 flex items-center gap-2">
                   <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -522,6 +550,20 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                             <p className={fieldTextClass}>{formatDaysOfWeek(session.days_of_week)}</p>
                           </div>
                         )}
+
+                        {/* Where — only worth a line when the camp runs in more
+                            than one place; otherwise the header already says it. */}
+                        {visibleLocations(camp).length > 1 && (() => {
+                          const site = sessionLocation(camp, session);
+                          return (
+                            <div className="col-span-2">
+                              <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
+                              <p className={fieldTextClass}>
+                                {site ? siteLabel(site) ?? site.address ?? 'Location' : 'Not confirmed — check with the camp'}
+                              </p>
+                            </div>
+                          );
+                        })()}
 
                         {/* Age Range */}
                         {(session.min_age != null || session.max_age != null) && (

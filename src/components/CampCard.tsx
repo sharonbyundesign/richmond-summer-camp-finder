@@ -14,6 +14,11 @@ import type { VerificationStatus } from '@/types/database';
 interface CampCardProps {
   /** Straight-line miles from the searched zip. Omitted in v1, which has no zip search. */
   distanceMiles?: number | null;
+  /**
+   * For a camp with several sites: how many, and which is nearest. Set only
+   * when there is more than one — a single-site camp keeps showing its city.
+   */
+  sites?: { count: number; nearest: string | null };
   /** Supplied by v2 to sync card hover with the map pin. Its presence also enables the lift. */
   onHoverChange?: (hovered: boolean) => void;
   camp: {
@@ -63,7 +68,7 @@ interface CampCardProps {
 
 const MAX_TAGS = 2;
 
-export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCardProps) {
+export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: CampCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   // Cards now show a stock photo for the camp's interest; image_url and the
   // site-scraping fallback below only apply to camps with no recognised interest.
@@ -148,7 +153,15 @@ export default function CampCard({ camp, distanceMiles, onHoverChange }: CampCar
   // toCategories normalises and de-dupes raw tags into the canonical category set.
   const tags = toCategories((camp.camp_interests || []).map((i) => i.tag || i.interest_name));
 
-  const city = cityFromLocation(camp.location);
+  // Several sites: name the nearest when a zip says which is nearest, otherwise
+  // say how many. "Glen Allen (1 of 3)" tells a parent there is a branch near
+  // them; a bare city would suggest the camp only runs there.
+  const city =
+    sites && sites.count > 1
+      ? sites.nearest && typeof distanceMiles === 'number'
+        ? `${sites.nearest} (1 of ${sites.count})`
+        : `${sites.count} locations`
+      : cityFromLocation(camp.location);
   const ages = ageRange(camp.camp_sessions);
   const dates = sessionRange(camp.camp_sessions);
   const sessionCount = camp.camp_sessions?.length ?? 0;

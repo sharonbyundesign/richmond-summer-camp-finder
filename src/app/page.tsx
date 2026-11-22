@@ -12,7 +12,7 @@ import type { MapMarker } from '@/components/v2/MapPanel';
 import { usePillState, EMPTY_PILL } from '@/lib/v2/usePillState';
 import { useFilterState } from '@/lib/v2/useFilterState';
 import { buildWeekOptions, campMatchesAges, campMatchesWeeks } from '@/lib/v2/weeks';
-import { lookupZip, campCoord, haversineMiles } from '@/lib/v2/geo';
+import { lookupZip, campSites, nearestSite, haversineMiles } from '@/lib/v2/geo';
 import {
   emptyFilters,
   filtersToSearchParams,
@@ -298,9 +298,10 @@ export default function Home() {
           campMatchesWeeks(camp, selectedWeeks)
       )
       .map((camp) => {
-        const coords = campCoord(camp);
-        const distance = coords && zipCenter ? haversineMiles(zipCenter, coords) : null;
-        return { camp, coords, distance };
+        // Distance is to the nearest site: a parent in Glen Allen cares that
+        // the YMCA has a branch near them, not where its first branch is.
+        const site = nearestSite(camp, zipCenter);
+        return { camp, coords: site.coords, distance: site.distance, site };
       });
   }, [camps, pill.ages, pill.matchAllAges, selectedWeeks, zipCenter, matchesQuery]);
 
@@ -381,10 +382,9 @@ export default function Home() {
     // The zip radius is applied on the client, so it has to be repeated here;
     // a camp we cannot place is left out rather than guessed at.
     const inRange = radiusActive
-      ? undated.filter((camp) => {
-          const coords = campCoord(camp);
-          return coords !== null && haversineMiles(zipCenter!, coords) <= pill.radius;
-        })
+      ? undated.filter((camp) =>
+          campSites(camp).some((point) => haversineMiles(zipCenter!, point) <= pill.radius),
+        )
       : undated;
     return inRange.filter(matchesQuery).sort((a, b) => a.name.localeCompare(b.name));
   }, [undated, showUndated, radiusActive, zipCenter, pill.radius, matchesQuery]);
@@ -410,26 +410,25 @@ export default function Home() {
       entry: { camp: Camp; coords: { lat: number; lng: number } | null; distance: number | null },
       muted: boolean
     ): MapMarker[] =>
-      entry.coords
-        ? [
-            {
-              id: entry.camp.id,
-              name: entry.camp.name,
-              location: entry.camp.location,
-              lat: entry.coords.lat,
-              lng: entry.coords.lng,
-              camp: entry.camp,
-              muted,
-              distanceMiles: entry.distance,
-            },
-          ]
-        : [];
+      // A pin per site. They share the camp's id, so hovering the card lights
+      // up every branch, and each carries its own key.
+      campSites(entry.camp).map((point, index) => ({
+        id: entry.camp.id,
+        key: `${entry.camp.id}:${index}`,
+        name: entry.camp.name,
+        location: entry.camp.location,
+        lat: point.lat,
+        lng: point.lng,
+        camp: entry.camp,
+        muted,
+        distanceMiles: zipCenter ? haversineMiles(zipCenter, point) : entry.distance,
+      }));
 
     return [
       ...listed.flatMap((entry) => toMarker(entry, false)),
       ...outOfRadius.flatMap((entry) => toMarker(entry, true)),
     ];
-  }, [listed, outOfRadius]);
+  }, [listed, outOfRadius, zipCenter]);
 
   // Ages/weeks/zip stay empty in `filters` (the pill owns them), so this counts
   // only the modal-owned interests / session type / price selections.
@@ -644,11 +643,12 @@ export default function Home() {
               )}
 
               <div className="grid gap-5" style={cardGridStyle}>
-                {listed.map(({ camp, distance }) => (
+                {listed.map(({ camp, distance, site }) => (
                   <CampCard
                     key={camp.id}
                     camp={camp}
                     distanceMiles={radiusActive ? distance : undefined}
+                    sites={site.siteCount > 1 ? { count: site.siteCount, nearest: site.label } : undefined}
                     onHoverChange={(hovered) => setHoveredCampId(hovered ? camp.id : null)}
                   />
                 ))}

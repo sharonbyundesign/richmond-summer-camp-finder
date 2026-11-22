@@ -16,6 +16,12 @@ const DEFAULT_ZOOM = 11;
 const ACCENT = '#2563eb';
 
 export interface MapMarker extends CampMarker {
+  /**
+   * Unique per pin. A camp with several sites has one pin per site, all sharing
+   * the camp's `id` — so hovering its card lights up every one of them — and
+   * each needs its own React key.
+   */
+  key?: string;
   /** Outside the active radius: still shown, but visually demoted. */
   muted?: boolean;
   distanceMiles?: number | null;
@@ -295,7 +301,7 @@ export default function MapPanel({
 
           return (
             <Marker
-              key={marker.id}
+              key={marker.key ?? marker.id}
               position={[marker.lat, marker.lng]}
               icon={marker.muted ? mutedIcon : active ? highlightIcon : baseIcon}
               zIndexOffset={active ? 1000 : marker.muted ? -500 : 0}

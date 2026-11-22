@@ -6,6 +6,7 @@
 // multi-select chips. Each session-level section is an existential over a
 // camp's sessions ("camp matches if it has at least one session that fits").
 
+import { campPoints } from '@/lib/locations';
 import { normalizeInterest, toCategories } from '@/lib/interest-categories';
 
 // ---------------------------------------------------------------------------
@@ -266,9 +267,11 @@ function matchesCampLevel(camp: CampLike, filters: Filters, origin: LatLng | nul
   }
 
   if (origin && radius > 0) {
-    if (camp.latitude === null || camp.latitude === undefined) return false;
-    if (camp.longitude === null || camp.longitude === undefined) return false;
-    if (haversineMiles(origin, { lat: camp.latitude, lng: camp.longitude }) > radius) return false;
+    // In range if ANY of its sites is — a YMCA branch near you counts even
+    // when the first branch on file is across town.
+    const points = campPoints(camp as Parameters<typeof campPoints>[0]);
+    if (points.length === 0) return false;
+    if (!points.some((point) => haversineMiles(origin, point) <= radius)) return false;
   }
 
   return true;

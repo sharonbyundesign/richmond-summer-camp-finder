@@ -31,6 +31,7 @@ work done since.
 | 4 | `004_validation_constraints` | Hard `CHECK` constraints on ages, price, dates, coordinates |
 | 5 | `005_email_signups` | `email_signups` — the camp-updates email list. Independent of 1-4. |
 | 6 | `006_camp_notify_requests` | `camp_notify_requests` — per-camp "notify me when the dates are posted". Independent of 1-5. |
+| 7 | `007_camp_locations` | `camp_locations` + `camp_sessions.location_id` — where each session runs. Backfills one site per geocoded camp. |
 
 Roll back in reverse: **004 → 003 → 002 → 001**. 003 must come down before 002
 (`camp_updates.source_id` references `camp_sources`). 005 stands alone and can
