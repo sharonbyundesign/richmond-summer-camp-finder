@@ -5,6 +5,7 @@ import Link from 'next/link';
 import CampCard from '@/components/CampCard';
 import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
+import SiteHeader from '@/components/SiteHeader';
 
 interface Camp {
   id: string;
@@ -275,24 +276,17 @@ export default function SavedCampsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* The wordmark bar every non-finder page carries, so this page reads as
+          part of Scouty rather than as a standalone screen. "Saved Items" is
+          the h1 — the wordmark above is a link — and it is sized to match the
+          wordmark instead of towering over it. */}
+      <SiteHeader />
+
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pt-6 sm:pt-8 pb-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              Saved Items
-            </h1>
-            <p className="text-gray-600">
-              Your favorite camps and sessions
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Back to Search
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">
+          Saved Items
+        </h1>
+        <p className="mt-1 text-gray-600">Your favorite camps and sessions</p>
       </div>
 
       <div className="px-4 sm:px-6 lg:px-8 xl:px-12 pb-6 sm:pb-8">
