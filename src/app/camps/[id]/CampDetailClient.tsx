@@ -130,16 +130,27 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
 
   // The camp arrives from the server component; nothing to fetch here.
 
-  const formatDate = (dateString: string) => {
+  /**
+   * "June 7–11, 2027", "Jun 28 – Jul 1, 2027", or with both years when a
+   * range crosses one. Short enough to sit on one line in a three-column card.
+   */
+  const formatDateRange = (startString: string, endString: string) => {
     // parseLocalDate, not new Date: a bare YYYY-MM-DD is parsed as UTC
     // midnight, which in Richmond renders as the day before.
-    const date = parseLocalDate(dateString);
-    if (!date) return dateString;
-    return date.toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    const start = parseLocalDate(startString);
+    const end = parseLocalDate(endString);
+    if (!start || !end) return `${startString} – ${endString}`;
+    const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString('en-US', opts);
+    if (start.getFullYear() !== end.getFullYear()) {
+      return `${fmt(start, { month: 'short', day: 'numeric', year: 'numeric' })} – ${fmt(end, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    const year = start.getFullYear();
+    if (start.getMonth() === end.getMonth()) {
+      return start.getDate() === end.getDate()
+        ? `${fmt(start, { month: 'long', day: 'numeric' })}, ${year}`
+        : `${fmt(start, { month: 'long', day: 'numeric' })}–${end.getDate()}, ${year}`;
+    }
+    return `${fmt(start, { month: 'short', day: 'numeric' })} – ${fmt(end, { month: 'short', day: 'numeric' })}, ${year}`;
   };
 
   const formatTime = (timeString?: string) => {
@@ -155,9 +166,15 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
     }
   };
 
+  /** "Mon–Fri" for a run of consecutive days, else "Tue, Thu". */
   const formatDaysOfWeek = (days?: string[]) => {
     if (!days || days.length === 0) return '';
-    return days.join(', ');
+    const order = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const idx = days.map((d) => order.indexOf(d.trim().toLowerCase()));
+    const short = (d: string) => d.trim().slice(0, 3).replace(/^./, (c) => c.toUpperCase());
+    const consecutive =
+      idx.every((i) => i >= 0) && idx.length >= 3 && idx.every((i, n) => n === 0 || i === idx[n - 1] + 1);
+    return consecutive ? `${short(days[0])}–${short(days[days.length - 1])}` : days.map(short).join(', ');
   };
 
   if (loading) {
@@ -449,7 +466,7 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
               )}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
               {sortedSessions.map((session, idx) => {
                 const isSaved = session.id ? savedSessionIds.has(session.id) : false;
                 const status = getSessionStatus(session, todayNY);
@@ -556,7 +573,7 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                         <div>
                           <p className="text-sm font-medium text-gray-500 mb-1">Dates</p>
                           <p className={fieldTextClass}>
-                            {formatDate(session.start_date)} - {formatDate(session.end_date)}
+                            {formatDateRange(session.start_date, session.end_date)}
                           </p>
                         </div>
 
