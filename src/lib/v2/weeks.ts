@@ -1,6 +1,7 @@
 import type { Camp, CampSession } from '@/types/camp';
 import { ACTIVE_SEASON_YEAR } from '@/lib/trust';
 import { summerWindow } from '@/lib/validation/campData';
+import { weeklyPrice } from '@/lib/campFilters';
 
 export interface WeekOption {
   /** Monday of the week, as YYYY-MM-DD. Stable id used in state + localStorage. */
@@ -173,4 +174,34 @@ export function campMatchesAges(camp: Camp, ages: number[], matchAll = false): b
   return matchAll
     ? ages.every((age) => sessions.some((session) => coversAge(session, age)))
     : sessions.some((session) => ages.some((age) => coversAge(session, age)));
+}
+
+/**
+ * The cheapest weekly price among the sessions that fit the parent's ages and
+ * weeks — what "Price: low to high" sorts on. Limited to fitting sessions so
+ * a camp isn't ranked by a $90 preschool week when the parent is looking for
+ * a 10-year-old in July. Null when no fitting session has a price; those camps
+ * sort last.
+ */
+export function cheapestFittingWeeklyPrice(camp: Camp, ages: number[], weeks: WeekOption[]): number | null {
+  let cheapest: number | null = null;
+
+  for (const session of camp.camp_sessions || []) {
+    if (ages.length > 0 && !ages.some((age) => coversAge(session, age))) continue;
+
+    if (weeks.length > 0) {
+      const start = session.start_date ? parseLocalDate(session.start_date) : null;
+      const end = session.end_date ? parseLocalDate(session.end_date) : null;
+      if (!start || !end) continue;
+      const overlaps = weeks.some(
+        (week) => start.getTime() <= week.end.getTime() + MS_PER_DAY - 1 && end.getTime() >= week.start.getTime(),
+      );
+      if (!overlaps) continue;
+    }
+
+    const weekly = weeklyPrice(session);
+    if (weekly !== null && (cheapest === null || weekly < cheapest)) cheapest = weekly;
+  }
+
+  return cheapest;
 }
