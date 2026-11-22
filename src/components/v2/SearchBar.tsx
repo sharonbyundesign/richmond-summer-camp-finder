@@ -393,6 +393,12 @@ export default function SearchBar({
             selected={filters.priceBrackets}
             onToggle={(value) => onFiltersChange({ priceBrackets: toggle(filters.priceBrackets, value) })}
           />
+          {/* Most camps haven't posted prices yet, so a price filter hides far
+              more than a parent would guess. Saying so keeps "12 camps" from
+              reading as "only 12 affordable camps in Richmond". */}
+          <p className="mt-3 text-xs text-gray-500">
+            Camps that haven&apos;t posted a price are hidden while this is on.
+          </p>
         </Popover>
       )}
 
