@@ -17,6 +17,8 @@ export interface SelectFeatures {
   trust: boolean;
   /** camp_locations and camp_sessions.location_id (migration 007). */
   locations: boolean;
+  /** camp_registrations: when registration opens, per summer (migration 010). */
+  registrations: boolean;
 }
 
 /** Camp columns the app has always read. */
@@ -90,6 +92,21 @@ const LOCATIONS = `
     outside_service_area
   )`;
 
+/** When each summer's registration opens (migration 010). */
+const REGISTRATIONS = `
+  camp_registrations(
+    season_year,
+    opens_on,
+    opens_time,
+    priority_opens_on,
+    priority_opens_time,
+    priority_note,
+    opens_note,
+    registration_url,
+    status,
+    fills_fast
+  )`;
+
 function buildSelect(features: SelectFeatures, extraCampColumns = '', extraSessionColumns = ''): string {
   const campCols = [CAMP_BASE, extraCampColumns, features.trust ? CAMP_TRUST : '']
     .filter(Boolean)
@@ -105,7 +122,7 @@ function buildSelect(features: SelectFeatures, extraCampColumns = '', extraSessi
 
   return `${campCols},
   camp_sessions(${sessionCols}
-  ),${INTERESTS}${features.locations ? `,${LOCATIONS}` : ''}`;
+  ),${INTERESTS}${features.locations ? `,${LOCATIONS}` : ''}${features.registrations ? `,${REGISTRATIONS}` : ''}`;
 }
 
 /** Select for the list route. updated_at feeds the "Recently updated" sort. */
@@ -136,9 +153,13 @@ export const isMissingColumnError = isMissingSchemaError;
 /** Which feature a missing-schema error is about. */
 function featureBlamedBy(error: PostgrestError, features: SelectFeatures): keyof SelectFeatures | null {
   const text = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`;
+  // Checked first: a missing relationship (PGRST200) names its table, and the
+  // locations rule below would otherwise claim every PGRST200.
+  if (features.registrations && /registration/i.test(text)) return 'registrations';
   if (features.locations && (error.code === 'PGRST200' || /location/i.test(text))) return 'locations';
   if (features.trust) return 'trust';
   if (features.locations) return 'locations';
+  if (features.registrations) return 'registrations';
   return null;
 }
 
@@ -147,12 +168,13 @@ function featureBlamedBy(error: PostgrestError, features: SelectFeatures): keyof
 // applying a migration is picked up within a minute instead of waiting for
 // every serverless instance to recycle.
 const NEGATIVE_TTL_MS = 60_000;
-const present: Record<keyof SelectFeatures, boolean | null> = { trust: null, locations: null };
-const negativeAt: Record<keyof SelectFeatures, number> = { trust: 0, locations: 0 };
+const present: Record<keyof SelectFeatures, boolean | null> = { trust: null, locations: null, registrations: null };
+const negativeAt: Record<keyof SelectFeatures, number> = { trust: 0, locations: 0, registrations: 0 };
 
 const MIGRATION_FOR: Record<keyof SelectFeatures, string> = {
   trust: '001_camp_trust_fields',
   locations: '007_camp_locations',
+  registrations: '010_camp_registrations',
 };
 
 function assumed(feature: keyof SelectFeatures): boolean {
@@ -189,10 +211,14 @@ export function recordTrustColumnsPresent(isPresent: boolean): void {
 export async function selectWithFallback<T>(
   run: (features: SelectFeatures) => PromiseLike<{ data: T | null; error: PostgrestError | null }>,
 ): Promise<{ data: T | null; error: PostgrestError | null; features: SelectFeatures }> {
-  let features: SelectFeatures = { trust: assumed('trust'), locations: assumed('locations') };
+  let features: SelectFeatures = {
+    trust: assumed('trust'),
+    locations: assumed('locations'),
+    registrations: assumed('registrations'),
+  };
 
   // At most one retry per feature, plus the final attempt.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const result = await run(features);
 
     if (!result.error) {

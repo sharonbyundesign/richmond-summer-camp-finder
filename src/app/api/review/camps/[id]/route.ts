@@ -26,10 +26,15 @@ async function loadProposals(
       .in('status', ['pending', 'needs_review'])
       .order('extracted_at', { ascending: true });
 
-  const withSender = await query(
+  // Newest schema first: the sender with any registration date they gave
+  // (010), then the sender alone (008), then the plain proposal.
+  const sender = 'contact_name, contact_email, contact_role, message, created_at';
+  const withRegistration = await query(
     `${PROPOSAL_COLUMNS}, submission_id,
-     submission:camp_submissions(contact_name, contact_email, contact_role, message, created_at)`,
+     submission:camp_submissions(${sender}, registration_opens_on, registration_opens_time, registration_note, registration_url)`,
   );
+  if (!withRegistration.error) return withRegistration;
+  const withSender = await query(`${PROPOSAL_COLUMNS}, submission_id, submission:camp_submissions(${sender})`);
   return withSender.error ? query(PROPOSAL_COLUMNS) : withSender;
 }
 
@@ -47,7 +52,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Supabase is not configured' }, { status: 500 });
   }
 
-  const [campResult, sourcesResult, proposalsResult] = await Promise.all([
+  const [campResult, sourcesResult, proposalsResult, registrationResult] = await Promise.all([
     supabase
       .from('camps')
       .select(
@@ -67,6 +72,13 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     // what a reviewer should be reading — typing a session by hand is the
     // fallback, not the main path.
     loadProposals(supabase, params.id),
+    // This season's registration window (010); absent before that migration.
+    supabase
+      .from('camp_registrations' as never)
+      .select('opens_on, opens_time, priority_opens_on, priority_opens_time, priority_note, opens_note, registration_url, status, fills_fast, source_url, verification_status, last_verified_at')
+      .eq('camp_id', params.id)
+      .eq('season_year', REVIEW_SEASON_YEAR)
+      .maybeSingle(),
   ]);
 
   if (campResult.error) {
@@ -91,6 +103,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     sessions_in_season: sessions.filter((s) => s.season_year === REVIEW_SEASON_YEAR),
     sessions_previous: sessions.filter((s) => s.season_year !== REVIEW_SEASON_YEAR),
     sources: sourcesResult.data ?? [],
+    registration: registrationResult.error ? null : registrationResult.data,
+    registration_available: !registrationResult.error,
     proposals: proposalsResult.data ?? [],
   });
 }

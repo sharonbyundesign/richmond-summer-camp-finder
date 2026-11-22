@@ -7,13 +7,17 @@ import { capture } from '@/lib/analytics';
 import { feedbackMailto } from '@/lib/contact';
 import {
   CONTACT_ROLES,
+  EMPTY_REGISTRATION,
   EMPTY_SESSION,
   MAX_SESSIONS,
   checkContact,
+  checkRegistration,
   checkSession,
   isBlank,
+  isRegistrationBlank,
   type ContactDraft,
   type FieldErrors,
+  type RegistrationDraft,
   type SessionDraft,
 } from '@/lib/campSubmission';
 
@@ -80,6 +84,12 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
   const [contactErrors, setContactErrors] = useState<FieldErrors<keyof ContactDraft>>({});
   const [sessionErrors, setSessionErrors] = useState<Array<FieldErrors<keyof SessionDraft>>>([]);
   const [sentCount, setSentCount] = useState(0);
+  const [registration, setRegistration] = useState<RegistrationDraft>({ ...EMPTY_REGISTRATION });
+  const [regErrors, setRegErrors] = useState<FieldErrors<keyof RegistrationDraft>>({});
+  const setReg = (field: keyof RegistrationDraft, value: string) => {
+    setRegistration((r) => ({ ...r, [field]: value }));
+    setRegErrors((e) => ({ ...e, [field]: undefined }));
+  };
 
   const siteIds = camp.sites.map((s) => s.id);
   const manySites = camp.sites.length > 1;
@@ -113,14 +123,17 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
     const cErrors = checkContact(contact);
     const sErrors = sessions.map((row) => (isBlank(row) ? {} : checkSession(row, seasonYear, siteIds).errors));
     const filled = sessions.filter((row) => !isBlank(row)).length;
+    const hasRegistration = !isRegistrationBlank(registration);
+    const rErrors = hasRegistration ? checkRegistration(registration, seasonYear).errors : {};
     setContactErrors(cErrors);
     setSessionErrors(sErrors);
-    if (Object.keys(cErrors).length || sErrors.some((e) => Object.keys(e).length)) {
+    setRegErrors(rErrors);
+    if (Object.keys(cErrors).length || sErrors.some((e) => Object.keys(e).length) || Object.keys(rErrors).length) {
       setError('Please fix the highlighted fields.');
       return;
     }
-    if (filled === 0) {
-      setError('Add at least one session.');
+    if (filled === 0 && !hasRegistration) {
+      setError('Add at least one session, or when registration opens.');
       return;
     }
 
@@ -130,12 +143,13 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
       const response = await fetch(`/api/camps/${camp.id}/updates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact, sessions, company_website: honeypot }),
+        body: JSON.stringify({ contact, sessions, registration, company_website: honeypot }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setContactErrors(data.contact_errors ?? {});
         setSessionErrors(data.session_errors ?? []);
+        setRegErrors(data.registration_errors ?? {});
         setError(data.error ?? 'Something went wrong. Please try again.');
         setStatus('idle');
         return;
@@ -159,8 +173,9 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
           <div className="rounded-2xl border border-green-200 bg-white p-6 shadow-sm">
             <h1 className="text-2xl font-bold text-gray-900">Thanks, {firstName}.</h1>
             <p className="mt-3 text-gray-700">
-              We got {sentCount} {sentCount === 1 ? 'session' : 'sessions'} for {camp.name}. We check every
-              update before it goes live, usually within a few days, and will email you if anything is unclear.
+              We got {sentCount > 0 ? `${sentCount} ${sentCount === 1 ? 'session' : 'sessions'}` : 'your registration date'}{' '}
+              for {camp.name}. We check every update before it goes live, usually within a few days, and will email
+              you if anything is unclear.
             </p>
             <Link
               href={`/camps/${camp.id}`}
@@ -214,7 +229,8 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
 
         <h2 className="mt-8 text-lg font-semibold text-gray-900">Your sessions</h2>
         <p className="mt-1 text-sm text-gray-600">
-          One row per week or session. Dates are required; add the rest if you have it.
+          One row per week or session. Dates are required; add the rest if you have it. Not set yet? Skip
+          to registration below.
         </p>
 
         <ol className="mt-4 space-y-4">
@@ -351,6 +367,47 @@ export default function CampUpdateForm({ camp, seasonYear }: { camp: UpdateFormC
         <p className="mt-2 text-xs text-gray-500">
           &ldquo;Add the next week&rdquo; copies the last session one week later, times, ages and price included.
         </p>
+
+        <h2 className="mt-10 text-lg font-semibold text-gray-900">When does registration open?</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Parents plan around this, especially for camps that fill fast. Send it even if your session dates
+          aren&rsquo;t set yet.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-4">
+          <Field label="Opens on" error={regErrors.opens_on}>
+            <input
+              type="date"
+              value={registration.opens_on}
+              onChange={(e) => setReg('opens_on', e.target.value)}
+              className={`${INPUT} ${regErrors.opens_on ? INVALID : ''}`}
+            />
+          </Field>
+          <Field label="At (optional)" error={regErrors.opens_time}>
+            <input
+              type="time"
+              value={registration.opens_time}
+              onChange={(e) => setReg('opens_time', e.target.value)}
+              className={`${INPUT} ${regErrors.opens_time ? INVALID : ''}`}
+            />
+          </Field>
+          <Field label="Registration link (optional)" error={regErrors.url} className="col-span-2">
+            <input
+              type="url"
+              value={registration.url}
+              onChange={(e) => setReg('url', e.target.value)}
+              placeholder="https://"
+              className={`${INPUT} ${regErrors.url ? INVALID : ''}`}
+            />
+          </Field>
+          <Field label="Anything else? (optional)" error={regErrors.note} className="col-span-2 sm:col-span-4">
+            <input
+              value={registration.note}
+              onChange={(e) => setReg('note', e.target.value)}
+              placeholder="e.g. Returning families can register a week early"
+              className={`${INPUT} ${regErrors.note ? INVALID : ''}`}
+            />
+          </Field>
+        </div>
 
         <h2 className="mt-10 text-lg font-semibold text-gray-900">About you</h2>
         <p className="mt-1 text-sm text-gray-600">So we can check this is from {camp.name}, and ask if anything is unclear.</p>

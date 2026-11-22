@@ -63,6 +63,41 @@ type Submission = {
   contact_role: string | null;
   message: string | null;
   created_at: string;
+  /** What the camp said about registration (migration 010). */
+  registration_opens_on?: string | null;
+  registration_opens_time?: string | null;
+  registration_note?: string | null;
+  registration_url?: string | null;
+};
+
+/** This season's registration window, as the form edits it (all strings). */
+type RegDraft = {
+  opens_on: string;
+  opens_time: string;
+  priority_opens_on: string;
+  priority_opens_time: string;
+  priority_note: string;
+  opens_note: string;
+  registration_url: string;
+  status: string;
+  fills_fast: boolean;
+  source_url: string;
+};
+
+const EMPTY_REG: RegDraft = {
+  opens_on: '', opens_time: '', priority_opens_on: '', priority_opens_time: '', priority_note: '',
+  opens_note: '', registration_url: '', status: 'unknown', fills_fast: false, source_url: '',
+};
+
+const toRegDraft = (r: Record<string, unknown> | null | undefined): RegDraft => {
+  if (!r) return { ...EMPTY_REG };
+  const v = (k: string) => (r[k] == null ? '' : String(r[k]).slice(0, k.endsWith('time') ? 5 : undefined));
+  return {
+    opens_on: v('opens_on'), opens_time: v('opens_time'), priority_opens_on: v('priority_opens_on'),
+    priority_opens_time: v('priority_opens_time'), priority_note: v('priority_note'), opens_note: v('opens_note'),
+    registration_url: v('registration_url'), status: v('status') || 'unknown', fills_fast: r.fills_fast === true,
+    source_url: v('source_url'),
+  };
 };
 
 /** Host of a URL without "www.", or null. */
@@ -117,7 +152,32 @@ export default function ReviewClient() {
     sessions_previous: Session[];
     sources: Source[];
     proposals: Proposal[];
+    registration?: Record<string, unknown> | null;
+    registration_available?: boolean;
   } | null>(null);
+  const [reg, setReg] = useState<RegDraft>({ ...EMPTY_REG });
+  const [regMessage, setRegMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
+
+  // Load the camp's saved window into the form whenever a camp opens.
+  useEffect(() => {
+    setReg(toRegDraft(detail?.registration ?? null));
+    setRegMessage(null);
+  }, [detail]);
+
+  const saveRegistration = async () => {
+    if (!selected) return;
+    if (!reviewer.trim()) {
+      setRegMessage({ tone: 'bad', text: 'Enter your name below first' });
+      return;
+    }
+    const response = await fetch('/api/review/registrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...reg, camp_id: selected, reviewed_by: reviewer.trim() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    setRegMessage(response.ok ? { tone: 'ok', text: 'Saved. It shows on the site now.' } : { tone: 'bad', text: data.error ?? 'Failed' });
+  };
 
   const [reviewer, setReviewer] = useState('');
   const [drafts, setDrafts] = useState<Draft[]>([{ ...EMPTY_DRAFT }]);
@@ -489,6 +549,93 @@ export default function ReviewClient() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {detail.registration_available !== false && (
+                <div className="rounded-xl border border-gray-200 bg-white p-5">
+                  <h3 className="text-sm font-semibold text-gray-900">Registration for {SEASON}</h3>
+                  <p className="mt-1 text-xs text-gray-600">
+                    When registration opens, from the camp&rsquo;s site or their reply. Saving publishes it at once,
+                    as checked by you. Dates are Richmond time.
+                  </p>
+                  {detail.proposals.some((p) => p.submission?.registration_opens_on || p.submission?.registration_note) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sub = detail.proposals.find((p) => p.submission?.registration_opens_on || p.submission?.registration_note)?.submission;
+                        if (!sub) return;
+                        setReg((r) => ({
+                          ...r,
+                          opens_on: sub.registration_opens_on ?? r.opens_on,
+                          opens_time: sub.registration_opens_time?.slice(0, 5) ?? r.opens_time,
+                          opens_note: sub.registration_note ?? r.opens_note,
+                          registration_url: sub.registration_url ?? r.registration_url,
+                        }));
+                      }}
+                      className="mt-2 text-xs font-medium text-blue-700 underline"
+                    >
+                      Fill in what the camp sent
+                    </button>
+                  )}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {([
+                      ['opens_on', 'Opens to everyone', 'date'],
+                      ['opens_time', 'At (time)', 'time'],
+                      ['priority_opens_on', 'Early window opens', 'date'],
+                      ['priority_opens_time', 'Early window time', 'time'],
+                      ['priority_note', 'Early window is for', 'text'],
+                      ['opens_note', 'Note (e.g. mid to late February)', 'text'],
+                      ['registration_url', 'Registration link', 'url'],
+                      ['source_url', 'Where you read this', 'url'],
+                    ] as Array<[keyof RegDraft, string, string]>).map(([field, label, type]) => (
+                      <label key={field} className="text-xs text-gray-500">
+                        {label}
+                        <input
+                          type={type}
+                          value={String(reg[field])}
+                          onChange={(e) => setReg((r) => ({ ...r, [field]: e.target.value }))}
+                          className="mt-0.5 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                        />
+                      </label>
+                    ))}
+                    <label className="text-xs text-gray-500">
+                      Status now
+                      <select
+                        value={reg.status}
+                        onChange={(e) => setReg((r) => ({ ...r, status: e.target.value }))}
+                        className="mt-0.5 block w-full rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900"
+                      >
+                        <option value="unknown">Not said (go by the dates)</option>
+                        <option value="upcoming">Not open yet</option>
+                        <option value="open">Open</option>
+                        <option value="waitlist">Waitlist only</option>
+                        <option value="full">Full</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={reg.fills_fast}
+                        onChange={(e) => setReg((r) => ({ ...r, fills_fast: e.target.checked }))}
+                      />
+                      Fills fast (sold out last summer)
+                    </label>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={saveRegistration}
+                      className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                      Save registration
+                    </button>
+                    {regMessage && (
+                      <span className={`text-sm ${regMessage.tone === 'ok' ? 'text-green-700' : 'text-red-700'}`}>
+                        {regMessage.text}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 

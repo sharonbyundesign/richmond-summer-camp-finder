@@ -23,6 +23,8 @@ import { siteLabel } from '@/lib/v2/geo';
 import NotifyMeButton from '@/components/NotifyMeButton';
 import SiteHeader from '@/components/SiteHeader';
 import ParentCheckins from '@/components/ParentCheckins';
+import RegistrationBlock from '@/components/RegistrationBlock';
+import type { CampRegistration } from '@/types/camp';
 import type { CheckinSummary } from '@/lib/checkins';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
@@ -66,6 +68,8 @@ interface Camp {
   location?: string;
   /** Every in-area site this camp runs at (migration 007). */
   camp_locations?: CampLocation[];
+  /** When registration opens, per summer (migration 010). */
+  camp_registrations?: CampRegistration[];
   description?: string;
   website_url?: string;
   image_url?: string;
@@ -379,6 +383,8 @@ export default function CampDetailClient({
                   ))}
                 </dl>
               )}
+
+              <RegistrationBlock camp={camp} />
 
               {camp.description && (
                 <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>

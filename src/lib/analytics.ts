@@ -126,7 +126,12 @@ export type EventName =
   // Parent check-ins: opened the form, sent it, confirmed by email.
   | 'checkin_started'
   | 'checkin_submitted'
-  | 'checkin_confirmed';
+  | 'checkin_confirmed'
+  // Registration windows: a reminder added to a calendar, the camp's own
+  // registration page opened, and the "Registration open" filter.
+  | 'registration_reminder_added'
+  | 'registration_link_clicked'
+  | 'registration_open_filter_toggled';
 
 export function capture(event: EventName, properties?: Record<string, unknown>) {
   if (!started) return;

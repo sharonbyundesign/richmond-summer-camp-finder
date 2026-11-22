@@ -6,9 +6,12 @@ import { stagingStatusFor, toValidationJson, validateSession } from '@/lib/valid
 import {
   MAX_SESSIONS,
   checkContact,
+  checkRegistration,
   checkSession,
   isBlank,
+  isRegistrationBlank,
   type ContactDraft,
+  type RegistrationDraft,
   type SessionDraft,
 } from '@/lib/campSubmission';
 
@@ -108,16 +111,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const sessionErrors = checked.map((c) => c?.errors ?? {});
   const proposals = checked.flatMap((c) => (c?.proposed ? [c.proposed] : []));
 
+  const regDraft: RegistrationDraft = {
+    opens_on: text(body.registration?.opens_on, 20),
+    opens_time: text(body.registration?.opens_time, 10),
+    note: text(body.registration?.note, 400),
+    url: text(body.registration?.url, 600),
+  };
+  const registration = isRegistrationBlank(regDraft) ? null : checkRegistration(regDraft, ACTIVE_SEASON_YEAR);
+
   const hasErrors =
-    Object.keys(contactErrors).length > 0 || sessionErrors.some((e) => Object.keys(e).length > 0);
+    Object.keys(contactErrors).length > 0 ||
+    sessionErrors.some((e) => Object.keys(e).length > 0) ||
+    Boolean(registration && !registration.clean);
   if (hasErrors) {
     return NextResponse.json(
-      { error: 'Please fix the highlighted fields.', contact_errors: contactErrors, session_errors: sessionErrors },
+      {
+        error: 'Please fix the highlighted fields.',
+        contact_errors: contactErrors,
+        session_errors: sessionErrors,
+        registration_errors: registration?.errors ?? {},
+      },
       { status: 400 },
     );
   }
-  if (proposals.length === 0) {
-    return NextResponse.json({ error: 'Add at least one session.' }, { status: 400 });
+  // A camp may know when registration opens before its dates are set.
+  if (proposals.length === 0 && !registration?.clean) {
+    return NextResponse.json({ error: 'Add at least one session, or when registration opens.' }, { status: 400 });
   }
 
   // Rate limits. The IP is only ever stored hashed.
@@ -144,20 +163,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
-  const { data: submission, error: submissionError } = await supabase
-    .from('camp_submissions')
-    .insert({
-      camp_id: campId,
-      contact_name: contact.name,
-      contact_email: contact.email,
-      contact_role: contact.role || null,
-      message: contact.message || null,
-      season_year: ACTIVE_SEASON_YEAR,
-      session_count: proposals.length,
-      ip_hash: ipHash,
-    } as never)
-    .select('id')
-    .single();
+  const reg = registration?.clean ?? null;
+  const base = {
+    camp_id: campId,
+    contact_name: contact.name,
+    contact_email: contact.email,
+    contact_role: contact.role || null,
+    message: contact.message || null,
+    season_year: ACTIVE_SEASON_YEAR,
+    session_count: proposals.length,
+    ip_hash: ipHash,
+  };
+  const insertSubmission = (row: Record<string, unknown>) =>
+    supabase.from('camp_submissions').insert(row as never).select('id').single();
+  let { data: submission, error: submissionError } = await insertSubmission(
+    reg
+      ? { ...base, registration_opens_on: reg.opens_on, registration_opens_time: reg.opens_time, registration_note: reg.note, registration_url: reg.url }
+      : base,
+  );
+  // Before migration 010 there are no registration columns: keep what the
+  // camp told us by folding it into the note instead of losing it.
+  if (reg && submissionError && (submissionError.code === 'PGRST204' || submissionError.code === '42703')) {
+    const said = [
+      reg.opens_on && `opens ${reg.opens_on}${reg.opens_time ? ` ${reg.opens_time}` : ''}`,
+      reg.note,
+      reg.url,
+    ].filter(Boolean).join(' · ');
+    ({ data: submission, error: submissionError } = await insertSubmission({
+      ...base,
+      message: [base.message, `Registration: ${said}`].filter(Boolean).join('\n'),
+    }));
+  }
   if (submissionError || !submission) {
     console.error('[camp-update] submission insert failed:', submissionError);
     return isMissingTable(submissionError) ? notOpen() : NextResponse.json(
@@ -185,7 +221,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     };
   });
 
-  const { error: updatesError } = await supabase.from('camp_updates').insert(updates as never);
+  const { error: updatesError } = updates.length
+    ? await supabase.from('camp_updates').insert(updates as never)
+    : { error: null };
   if (updatesError) {
     console.error('[camp-update] proposals insert failed:', updatesError);
     // Leave nothing half-written: a submission with no sessions is noise.
@@ -193,5 +231,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, session_count: proposals.length });
+  return NextResponse.json({ ok: true, session_count: proposals.length, registration: Boolean(reg) });
 }
