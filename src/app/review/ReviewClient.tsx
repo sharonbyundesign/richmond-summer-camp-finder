@@ -29,6 +29,17 @@ type Session = {
 
 type Source = { id: string; url: string; url_type: string; notes: string | null };
 
+/** A session the extractor staged, waiting for someone to rule on it. */
+type Proposal = {
+  id: string;
+  proposed: Record<string, unknown>;
+  validation: { ok: boolean; issues: Array<{ field: string; severity: string; message: string }> } | null;
+  confidence: number | null;
+  extractor: string | null;
+  review_note: string | null;
+  status: string;
+};
+
 type Draft = {
   name: string;
   start_date: string;
@@ -55,6 +66,7 @@ export default function ReviewClient() {
     sessions_in_season: Session[];
     sessions_previous: Session[];
     sources: Source[];
+    proposals: Proposal[];
   } | null>(null);
 
   const [reviewer, setReviewer] = useState('');
@@ -63,6 +75,10 @@ export default function ReviewClient() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null);
   const [warnings, setWarnings] = useState<Array<{ row: number; issues: Array<{ field: string; message: string }> }>>([]);
+  /** Reviewer corrections to a staged proposal, keyed by proposal id. */
+  const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [ruling, setRuling] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -110,6 +126,54 @@ export default function ReviewClient() {
     // Any edit invalidates an acknowledgement for the old values.
     setWarnings([]);
     setDrafts((rows) => rows.map((row, n) => (n === i ? { ...row, ...patch } : row)));
+  };
+
+  /** Approve or reject one staged proposal. */
+  const rule = async (proposal: Proposal, action: 'approve' | 'reject', acknowledgeWarnings = false) => {
+    if (!reviewer.trim()) {
+      setRuling((r) => ({ ...r, [proposal.id]: 'Enter your name below first' }));
+      return;
+    }
+    setBusy(proposal.id);
+    try {
+      localStorage.setItem(REVIEWER_KEY, reviewer.trim());
+    } catch {
+      // Not worth failing over.
+    }
+
+    const response = await fetch('/api/review/proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: proposal.id,
+        action,
+        reviewed_by: reviewer.trim(),
+        edits: edits[proposal.id] ?? null,
+        acknowledge_warnings: acknowledgeWarnings,
+      }),
+    });
+    const data = await response.json();
+    setBusy(null);
+
+    if (response.status === 409 && data.needs_acknowledgement) {
+      setRuling((r) => ({
+        ...r,
+        [proposal.id]: `${data.error}: ${data.warnings.map((w: { message: string }) => w.message).join('; ')}`,
+      }));
+      // Approving again from here sends the acknowledgement.
+      setEdits((e) => ({ ...e, [`${proposal.id}:ack`]: {} as Record<string, string> }));
+      return;
+    }
+    if (!response.ok) {
+      const detailText = Array.isArray(data.issues)
+        ? data.issues.map((i: { message: string }) => i.message).join('; ')
+        : '';
+      setRuling((r) => ({ ...r, [proposal.id]: [data.error, detailText].filter(Boolean).join(' — ') }));
+      return;
+    }
+
+    loadQueue();
+    fetch(`/api/review/camps/${selected}`).then((r) => r.json()).then(setDetail);
   };
 
   const save = async (acknowledgeWarnings = false) => {
@@ -294,8 +358,92 @@ export default function ReviewClient() {
                 </div>
               )}
 
+              {detail.proposals.length > 0 && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-5">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Found on the camp&rsquo;s page ({detail.proposals.length}) — review and approve
+                  </h3>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Staged by the extractor and not published. Correct anything that is wrong,
+                    then approve: it publishes under your name as{' '}
+                    <code>human_checked</code>, exactly as if you had typed it.
+                  </p>
+
+                  <ul className="mt-4 space-y-3">
+                    {detail.proposals.map((p) => {
+                      const value = (field: string) =>
+                        edits[p.id]?.[field] ??
+                        (p.proposed[field] == null ? '' : String(p.proposed[field]));
+                      const setField = (field: string, v: string) =>
+                        setEdits((e) => ({ ...e, [p.id]: { ...(e[p.id] ?? {}), [field]: v } }));
+                      const issues = p.validation?.issues ?? [];
+
+                      return (
+                        <li key={p.id} className="rounded-lg border border-gray-200 bg-white p-3">
+                          <div className="flex flex-wrap items-end gap-2">
+                            {([
+                              ['name', 'Name', 'text', 'w-40'],
+                              ['start_date', 'Start', 'date', 'w-36'],
+                              ['end_date', 'End', 'date', 'w-36'],
+                              ['min_age', 'Min age', 'number', 'w-20'],
+                              ['max_age', 'Max age', 'number', 'w-20'],
+                              ['price', 'Price', 'number', 'w-24'],
+                            ] as Array<[string, string, string, string]>).map(([field, label, type, width]) => (
+                              <label key={field} className="text-xs text-gray-500">
+                                <span className="block">{label}</span>
+                                <input
+                                  type={type}
+                                  value={value(field)}
+                                  onChange={(e) => setField(field, e.target.value)}
+                                  className={`mt-0.5 ${width} rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900`}
+                                />
+                              </label>
+                            ))}
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                            {p.confidence != null && <span>confidence {p.confidence}</span>}
+                            {p.extractor && <span>{p.extractor}</span>}
+                            {issues.length > 0 && (
+                              <span className="text-amber-800">
+                                {issues.map((i) => `${i.field}: ${i.message}`).join(' · ')}
+                              </span>
+                            )}
+                          </div>
+                          {p.review_note && (
+                            <p className="mt-1 truncate text-xs text-gray-400" title={p.review_note}>
+                              {p.review_note}
+                            </p>
+                          )}
+
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              onClick={() => rule(p, 'approve', Boolean(ruling[p.id]))}
+                              disabled={busy === p.id}
+                              className="rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                            >
+                              {busy === p.id ? 'Working…' : ruling[p.id] ? 'Approve anyway' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => rule(p, 'reject')}
+                              disabled={busy === p.id}
+                              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                            {ruling[p.id] && <span className="text-xs text-amber-800">{ruling[p.id]}</span>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
               <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <h3 className="text-sm font-semibold text-gray-900">Add {SEASON} sessions</h3>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Add {SEASON} sessions by hand
+                </h3>
 
                 <div className="mt-3 overflow-x-auto">
                   <table className="w-full min-w-[720px] text-sm">

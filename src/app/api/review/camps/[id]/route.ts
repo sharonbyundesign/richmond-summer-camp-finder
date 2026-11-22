@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Supabase is not configured' }, { status: 500 });
   }
 
-  const [campResult, sourcesResult] = await Promise.all([
+  const [campResult, sourcesResult, proposalsResult] = await Promise.all([
     supabase
       .from('camps')
       .select(
@@ -35,6 +35,16 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       .select('id, url, url_type, fetch_priority, notes')
       .eq('camp_id', params.id)
       .order('fetch_priority', { ascending: true }),
+    // Everything the extractor staged and nobody has ruled on yet. These are
+    // what a reviewer should be reading — typing a session by hand is the
+    // fallback, not the main path.
+    supabase
+      .from('camp_updates')
+      .select('id, proposed, validation, confidence, extractor, review_note, extracted_at, status, source_id')
+      .eq('camp_id', params.id)
+      .eq('target_table', 'camp_sessions')
+      .in('status', ['pending', 'needs_review'])
+      .order('extracted_at', { ascending: true }),
   ]);
 
   if (campResult.error) {
@@ -59,5 +69,6 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     sessions_in_season: sessions.filter((s) => s.season_year === REVIEW_SEASON_YEAR),
     sessions_previous: sessions.filter((s) => s.season_year !== REVIEW_SEASON_YEAR),
     sources: sourcesResult.data ?? [],
+    proposals: proposalsResult.data ?? [],
   });
 }
