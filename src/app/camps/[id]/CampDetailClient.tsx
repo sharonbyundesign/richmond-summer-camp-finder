@@ -23,6 +23,8 @@ import { siteLabel } from '@/lib/v2/geo';
 import NotifyMeButton from '@/components/NotifyMeButton';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
+import { campFacts } from '@/lib/campFacts';
+import type { CampSession as CampFactsSession } from '@/types/camp';
 
 interface CampSession {
   id?: string;
@@ -214,6 +216,8 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
   const trust = summarizeTrust(camp);
   const badge = trustBadge(trust);
 
+  const facts = campFacts(camp.camp_sessions as CampFactsSession[] | undefined);
+
   const reportUrl = feedbackMailto(`Incorrect info: ${camp.name}`);
 
   return (
@@ -302,6 +306,26 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                 </p>
               )}
 
+              {/* The four things parents filter on, answered before they scroll. */}
+              {facts && (
+                <dl className="mb-4 grid grid-cols-2 gap-x-6 gap-y-3 border-y border-gray-100 py-4 sm:grid-cols-4">
+                  {[
+                    ['Ages', facts.ages],
+                    ['Price', facts.price],
+                    ['Day', facts.day],
+                    ['Weeks', facts.weeks, facts.weeksRange],
+                  ].map(([label, value, sub]) => (
+                    <div key={label}>
+                      <dt className="text-sm text-gray-500">{label}</dt>
+                      <dd className={value ? 'font-semibold text-gray-900' : 'text-gray-400'}>
+                        {value ?? 'Not listed'}
+                      </dd>
+                      {sub && <dd className="text-sm text-gray-500">{sub}</dd>}
+                    </div>
+                  ))}
+                </dl>
+              )}
+
               {camp.description && (
                 <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
               )}
@@ -359,7 +383,8 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
             Camp Sessions ({sortedSessions.length})
           </h2>
 
-          {allSessionsPast && (
+          {/* The stale notice below already says whose dates these are. */}
+          {allSessionsPast && !(trust.known && trust.isStale) && (
             <p className="mb-4 text-sm text-gray-600">
               All {mostRecentSessionYear} sessions have ended.
             </p>
@@ -369,19 +394,17 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
               directly above the data it describes rather than in a footer. */}
           {trust.known && (
             <div
-              className={`mb-6 rounded-lg border p-4 ${
+              className={`mb-6 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${
                 trust.isStale ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'
               }`}
             >
-              <p className="text-sm text-gray-800">{provenanceSentence(trust)}</p>
-
-              {trust.lowConfidenceFields.length > 0 && (
-                <p className="mt-2 text-sm text-gray-800">
-                  Read the {formatFieldList(trust.lowConfidenceFields)} below as approximate — the
-                  camp&apos;s own listing was not clear enough for us to be sure.
-                </p>
-              )}
-
+              <p className="text-sm text-gray-800">
+                {trust.isStale
+                  ? `These are ${trust.seasonYear} dates. ${ACTIVE_SEASON_YEAR} dates aren't posted yet.`
+                  : provenanceSentence(trust)}
+                {trust.lowConfidenceFields.length > 0 &&
+                  ` Treat the ${formatFieldList(trust.lowConfidenceFields)} as approximate.`}
+                {trust.sourceUrl && ' '}
               {trust.sourceUrl && (
                 <a
                   href={trust.sourceUrl}
@@ -394,9 +417,9 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                       url: trust.sourceUrl,
                     })
                   }
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-1 whitespace-nowrap font-medium text-blue-600 hover:underline"
                 >
-                  See the page this came from
+                  Source
                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -407,18 +430,18 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                   </svg>
                 </a>
               )}
+              </p>
 
               {/* Only when we hold no dates for the season parents are planning
                   — the moment someone most needs to hear back, and the one
                   place the page has nothing better to offer them. */}
               {trust.isStale && (
-                <div className="mt-4 border-t border-amber-200 pt-4">
-                  <NotifyMeButton
-                    campId={camp.id}
-                    campName={camp.name}
-                    seasonYear={ACTIVE_SEASON_YEAR}
-                  />
-                </div>
+                <NotifyMeButton
+                  campId={camp.id}
+                  campName={camp.name}
+                  seasonYear={ACTIVE_SEASON_YEAR}
+                  className="shrink-0 self-start sm:self-auto"
+                />
               )}
             </div>
           )}
