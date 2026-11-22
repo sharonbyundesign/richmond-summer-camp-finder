@@ -9,6 +9,7 @@ import GoogleReviewsLink from '@/components/GoogleReviewsLink';
 import { capture } from '@/lib/analytics';
 import { feedbackMailto } from '@/lib/contact';
 import {
+  ACTIVE_SEASON_YEAR,
   formatCheckedAt,
   formatFieldList,
   lowConfidenceFields,
@@ -17,6 +18,7 @@ import {
   trustBadge,
 } from '@/lib/trust';
 import TrustBadge from '@/components/TrustBadge';
+import NotifyMeButton from '@/components/NotifyMeButton';
 import type { VerificationStatus } from '@/types/database';
 import { parseLocalDate } from '@/lib/v2/weeks';
 
@@ -376,6 +378,19 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                     />
                   </svg>
                 </a>
+              )}
+
+              {/* Only when we hold no dates for the season parents are planning
+                  — the moment someone most needs to hear back, and the one
+                  place the page has nothing better to offer them. */}
+              {trust.isStale && (
+                <div className="mt-4 border-t border-amber-200 pt-4">
+                  <NotifyMeButton
+                    campId={camp.id}
+                    campName={camp.name}
+                    seasonYear={ACTIVE_SEASON_YEAR}
+                  />
+                </div>
               )}
             </div>
           )}
