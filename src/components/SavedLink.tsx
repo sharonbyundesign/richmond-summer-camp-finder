@@ -46,19 +46,21 @@ export default function SavedLink({ className = '' }: { className?: string }) {
       aria-label={hasSaved ? `Saved camps, ${saved} saved` : 'Saved camps'}
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:text-gray-900 ${className}`}
     >
+      {/* Outlined whether or not anything is saved: the count is what says how
+          many, so the heart does not need to shout it too. */}
       <svg
         aria-hidden="true"
         viewBox="0 0 20 20"
         className={`h-4 w-4 ${hasSaved ? 'text-red-500' : 'text-gray-400'}`}
-        fill={hasSaved ? 'currentColor' : 'none'}
+        fill="none"
         stroke="currentColor"
-        strokeWidth={hasSaved ? 0 : 1.6}
+        strokeWidth={1.8}
       >
         <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
       </svg>
       <span>Saved</span>
       {hasSaved && (
-        <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-semibold leading-none text-white">
+        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-gray-700">
           {saved}
         </span>
       )}
