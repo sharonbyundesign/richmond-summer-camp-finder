@@ -339,7 +339,7 @@ export default function CampDetailClient({ initialCamp }: { initialCamp: Camp })
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
-                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                    className="inline-block px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
                   >
                     Visit Website
                   </a>

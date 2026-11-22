@@ -13,7 +13,7 @@ export default function Footer() {
   return (
     <footer className="z-20 border-t border-gray-200 bg-white md:sticky md:bottom-0">
       <FooterLift />
-      <div className="flex flex-col items-center justify-between gap-3 px-4 py-5 text-sm text-gray-500 sm:flex-row sm:px-6 lg:px-8">
+      <div className="flex flex-col items-center justify-between gap-3 px-4 py-4 text-sm text-gray-500 sm:flex-row sm:px-6 lg:px-8">
         {/* The Scouty / Beta wordmark used to sit here. Removed: the footer is
             sticky on desktop, so the row has one line of room and the signup
             needs it more than a second logo under the header's. */}
