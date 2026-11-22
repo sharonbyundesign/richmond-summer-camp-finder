@@ -35,7 +35,8 @@ export default function Footer() {
           <Link href="/disclaimer" className="hover:text-gray-700">
             Disclaimer
           </Link>
-          <FeedbackLink className="hover:text-gray-700" />
+          {/* The one action in this row, so it carries the link color. */}
+          <FeedbackLink className="font-medium text-blue-600 hover:text-blue-800" />
         </nav>
       </div>
     </footer>
