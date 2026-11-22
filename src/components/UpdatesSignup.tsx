@@ -13,8 +13,9 @@ interface UpdatesSignupProps {
    * 'inline' is the one-line footer form. The field's three widths are
    * measured, not chosen: the footer is sticky from md up, so a second line is
    * permanent chrome, and the widest that still fits on one line is 176px at
-   * 768, 240px at 1024 (where the label appears and takes the gain back) and
-   * 288px from 1280. Re-measure at those three widths before changing it.
+   * 768, 240px at 1024 and 288px from 1280. Re-measure at those three widths
+   * before changing it. Its label is for screen readers only: the button and
+   * the consent line under the field already say what it is.
    * 'stacked' is the roomier version for in-page placements.
    */
   layout?: 'inline' | 'stacked';
@@ -96,7 +97,7 @@ export default function UpdatesSignup({
           htmlFor={inputId}
           className={
             inline
-              ? 'sr-only lg:not-sr-only lg:text-sm lg:text-gray-500'
+              ? 'sr-only'
               : 'block text-sm font-medium text-gray-700'
           }
         >
