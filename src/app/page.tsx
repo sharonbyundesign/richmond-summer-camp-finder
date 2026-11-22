@@ -26,7 +26,7 @@ import { useFeatureFlag } from '@/lib/useFeatureFlag';
 
 const MapPanel = dynamic(() => import('@/components/v2/MapPanel'), { ssr: false });
 
-type SortMode = 'distance' | 'az' | 'price';
+type SortMode = 'distance' | 'az' | 'price' | 'updated';
 
 const DESKTOP_QUERY = '(min-width: 768px)';
 
@@ -148,6 +148,7 @@ export default function Home() {
   const [mobileMapOpen, setMobileMapOpen] = useState(false);
   // null = follow the default (distance once a zip is set, A–Z otherwise).
   const [sortOverride, setSortOverride] = useState<SortMode | null>(null);
+  const sortZipRef = useRef<HTMLInputElement>(null);
   const [hoveredCampId, setHoveredCampId] = useState<string | null>(null);
   const [selectedCampId, setSelectedCampId] = useState<string | null>(null);
 
@@ -332,6 +333,24 @@ export default function Home() {
           if (pb === null) return -1;
           return pa - pb || a.camp.name.localeCompare(b.camp.name);
         });
+      } else if (sort === 'updated') {
+        // Newest change to the camp or any of its sessions or checks first, so
+        // freshly added dates (next summer's, as they come in) surface on top.
+        const latest = new Map(
+          sorted.map((entry) => {
+            const stamps = [
+              entry.camp.updated_at,
+              entry.camp.last_verified_at,
+              ...(entry.camp.camp_sessions ?? []).flatMap((s) => [s.updated_at, s.last_verified_at]),
+            ].filter((t): t is string => Boolean(t));
+            return [entry.camp.id, stamps.sort().pop() ?? ''];
+          }),
+        );
+        sorted.sort(
+          (a, b) =>
+            (latest.get(b.camp.id) ?? '').localeCompare(latest.get(a.camp.id) ?? '') ||
+            a.camp.name.localeCompare(b.camp.name),
+        );
       } else {
         sorted.sort((a, b) => a.camp.name.localeCompare(b.camp.name));
       }
@@ -625,6 +644,10 @@ export default function Home() {
                       const next = event.target.value as SortMode;
                       setSortOverride(next);
                       capture('sort_changed', { sort_mode: next, zip_active: radiusActive });
+                      // Picking Distance without a zip: put the cursor in the zip field.
+                      if (next === 'distance' && !radiusActive) {
+                        requestAnimationFrame(() => sortZipRef.current?.focus());
+                      }
                     }}
                     // Explicit text-gray-900: without it the select inherits `body`'s
                     // --foreground, which flips to a near-white gray under a dark
@@ -636,14 +659,37 @@ export default function Home() {
                     <option value="distance" className="text-gray-900">Distance</option>
                     <option value="az" className="text-gray-900">A–Z</option>
                     <option value="price" className="text-gray-900">Price: low to high</option>
+                    <option value="updated" className="text-gray-900">Recently updated</option>
                   </select>
                 </div>
               </div>
 
+              {/* Distance needs a starting point: ask for it right here rather
+                  than warn. Same zip as the Location chip, so it drives the
+                  map, the radius and the chip too. */}
               {sort === 'distance' && !radiusActive && (
-                <p className="mb-4 text-xs text-amber-700">
-                  Enter a zip code to sort by distance. Showing A–Z until then.
-                </p>
+                <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
+                  <label htmlFor="sort-zip">Distance from</label>
+                  <input
+                    ref={sortZipRef}
+                    id="sort-zip"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="Your zip code"
+                    value={pill.zip}
+                    onChange={(event) => {
+                      const zip = event.target.value.replace(/\D/g, '').slice(0, 5);
+                      setPill({ ...pill, zip });
+                      if (zip.length === 5) capture('zip_filter_applied', { radius_miles: pill.radius, source: 'sort' });
+                    }}
+                    aria-invalid={zipStatus === 'notfound'}
+                    className="w-36 rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  />
+                  {zipStatus === 'notfound' && (
+                    <span role="alert" className="text-red-600">We couldn&apos;t find that zip code.</span>
+                  )}
+                </div>
               )}
 
               <p className="mb-4 text-xs text-gray-400">
