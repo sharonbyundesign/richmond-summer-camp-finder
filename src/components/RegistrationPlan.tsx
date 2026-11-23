@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { capture } from '@/lib/analytics';
+import { REG_PILL_STYLE } from '@/components/CampCard';
 import {
   currentRegistration,
   downloadIcs,
@@ -84,9 +85,15 @@ export default function RegistrationPlan({ camps }: { camps: PlanCamp[] }) {
               </svg>
             </Link>
             <span className="text-sm text-gray-700">
-              {next.length > 0
-                ? next.map((w) => `${shortDate(w.date, true)}${w.time ? ` ${shortTime(w.time)}` : ''} · ${w.label}`).join('  |  ')
-                : pill.text}
+              {next.length > 0 ? (
+                next.map((w) => `${shortDate(w.date, true)}${w.time ? ` ${shortTime(w.time)}` : ''} · ${w.label}`).join('  |  ')
+              ) : (
+                // No date to list (open, waitlist, full, or only a note): the
+                // same pill the camp's card shows.
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${REG_PILL_STYLE[pill.state]}`}>
+                  {pill.text}
+                </span>
+              )}
               {reg.fills_fast && <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-800"><svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M11.3 1.05a.75.75 0 01.45.82L10.9 7h4.35a.75.75 0 01.56 1.25l-7.5 8.5a.75.75 0 01-1.3-.62L7.85 11H3.5a.75.75 0 01-.56-1.25l7.5-8.5a.75.75 0 01.86-.2z" /></svg>Fills fast</span>}
             </span>
           </li>
