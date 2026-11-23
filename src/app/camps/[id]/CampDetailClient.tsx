@@ -531,15 +531,17 @@ export default function CampDetailClient({
 
         {/* Camp Header */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-6">
-          <div className="flex flex-col md:flex-row">
-            {/* Camp Image (curated) or placeholder — same landscape ratio as the camp card, left side */}
-            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 aspect-video bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
+          <div className="flex flex-col">
+            {/* Camp image across the top: the photos are all landscape, and a
+                side column left them cropped to a tall sliver. A short band,
+                since they are stock photos by interest, not the camp's own. */}
+            <div className="w-full h-48 sm:h-64 lg:h-72 flex-shrink-0 bg-gradient-to-br from-yellow-300 via-yellow-400 to-amber-400 relative overflow-hidden">
               {(campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url) ? (
                 <Image
                   src={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url!}
                   alt={`${camp.name} photo`}
                   fill
-                  sizes="(max-width: 768px) 100vw, 384px"
+                  sizes="(max-width: 1280px) 100vw, 1280px"
                   className="object-cover"
                   priority
                 />
@@ -585,7 +587,7 @@ export default function CampDetailClient({
               })()}
             </div>
 
-            {/* Camp Info — stacked, right side */}
+            {/* Camp Info, below the image */}
             <div className="flex-1 p-6 flex flex-col">
               <div className="mb-4 flex flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-bold text-gray-900">{camp.name}</h1>
