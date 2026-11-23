@@ -113,7 +113,7 @@ export default function SessionCard({ session, campId, campName, campImage }: Se
     >
       {/* The camp's photo, as on its camp card: the quickest way to see which
           camp a session belongs to in a list of saved ones. */}
-      <div className="relative h-[88px] w-full bg-gray-100">
+      <div className="relative h-[88px] w-full bg-gray-400">
         {image && (
           <Image
             src={image}
@@ -124,6 +124,11 @@ export default function SessionCard({ session, campId, campName, campImage }: Se
             onError={() => setImage(null)}
           />
         )}
+        {/* Camp name in white on a dark gradient: which camp, at a glance. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+        <p className="absolute inset-x-0 bottom-0 line-clamp-2 px-4 pb-2.5 text-sm font-semibold leading-snug text-white">
+          {campName}
+        </p>
       </div>
 
       {/* Save Button */}
@@ -163,11 +168,6 @@ export default function SessionCard({ session, campId, campName, campImage }: Se
       </button>
 
       <div className="p-6">
-        <div className="mb-2">
-          <p className="text-xs text-gray-500 mb-1">Camp</p>
-          <p className="text-sm font-medium text-gray-700">{campName}</p>
-        </div>
-        
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           {session.label || session.name || 'Session'}
         </h3>
@@ -189,25 +189,31 @@ export default function SessionCard({ session, campId, campName, campImage }: Se
             </div>
           )}
 
-          {session.days_of_week && session.days_of_week.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Days</p>
-              <p
-                className="text-sm text-gray-900"
-                title={sortedDays(session.days_of_week).join(', ')}
-                aria-label={sortedDays(session.days_of_week).join(', ')}
-              >
-                {formatDaysOfWeek(session.days_of_week)}
-              </p>
-            </div>
-          )}
-
-          {(session.min_age != null || session.max_age != null) && (
-            <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">Age Range</p>
-              <p className="text-sm text-gray-900">
-                Ages {session.min_age ?? '?'} - {session.max_age ?? '?'}
-              </p>
+          {/* Days and ages share a row: both short, both read together. */}
+          {((session.days_of_week && session.days_of_week.length > 0) ||
+            session.min_age != null ||
+            session.max_age != null) && (
+            <div className="grid grid-cols-2 gap-4">
+              {session.days_of_week && session.days_of_week.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Days</p>
+                  <p
+                    className="text-sm text-gray-900"
+                    title={sortedDays(session.days_of_week).join(', ')}
+                    aria-label={sortedDays(session.days_of_week).join(', ')}
+                  >
+                    {formatDaysOfWeek(session.days_of_week)}
+                  </p>
+                </div>
+              )}
+              {(session.min_age != null || session.max_age != null) && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Age Range</p>
+                  <p className="text-sm text-gray-900">
+                    Ages {session.min_age ?? '?'} - {session.max_age ?? '?'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
