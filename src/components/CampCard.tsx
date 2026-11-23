@@ -9,7 +9,8 @@ import { currentRegistration, registrationPill, type RegistrationState } from '@
 import type { CampRegistration } from '@/types/camp';
 
 /** Registration pill colors: open is the call to act; full is quiet. */
-const REG_PILL_STYLE: Record<RegistrationState, string> = {
+/** Shared with RegistrationPlan, so a state reads the same everywhere. */
+export const REG_PILL_STYLE: Record<RegistrationState, string> = {
   open: 'bg-green-100 text-green-800',
   opens: 'bg-blue-50 text-blue-800',
   waitlist: 'bg-amber-50 text-amber-900',
