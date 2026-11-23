@@ -37,9 +37,10 @@ export function shortTime(time: string | null | undefined): string | null {
 export type RegistrationState = 'open' | 'opens' | 'waitlist' | 'full' | 'note';
 
 /**
- * The one line a card shows, or null when there's nothing to say.
- * "Registration open" · "Registration opens Jan 15" · "Waitlist only" · "Full"
- * · or the camp's own words ("Opens mid to late February").
+ * The one line a card shows, or null when there's nothing to say. Short, as
+ * an instruction: "Register now" · "Register Jan 15" · "Register Dec 4 ·
+ * early access Dec 1" · "Waitlist only" · "Full" · or the camp's own words
+ * ("Register mid to late February").
  */
 export function registrationPill(
   reg: CampRegistration | null,
@@ -49,24 +50,24 @@ export function registrationPill(
   if (reg.status === 'full') return { state: 'full', text: 'Full' };
   if (reg.status === 'waitlist') return { state: 'waitlist', text: 'Waitlist only' };
   if (reg.status === 'open' || (reg.opens_on && reg.opens_on <= today)) {
-    return { state: 'open', text: 'Registration open' };
+    return { state: 'open', text: 'Register now' };
   }
   // Lead with the date everyone can use; an earlier members/returning window
   // rides along, since most families aren't in it.
   const general = reg.opens_on && reg.opens_on > today ? reg.opens_on : null;
   const early = reg.priority_opens_on && reg.priority_opens_on > today ? reg.priority_opens_on : null;
-  if (general && early) return { state: 'opens', text: `Opens ${shortDate(general)} · early access ${shortDate(early)}` };
-  if (general) return { state: 'opens', text: `Registration opens ${shortDate(general)}` };
-  if (early) return { state: 'opens', text: `Early registration opens ${shortDate(early)}` };
+  if (general && early) return { state: 'opens', text: `Register ${shortDate(general)} · early access ${shortDate(early)}` };
+  if (general) return { state: 'opens', text: `Register ${shortDate(general)}` };
+  if (early) return { state: 'opens', text: `Early access ${shortDate(early)}` };
   if (reg.opens_note) {
     // A card has room for a clause: "Mid to late February; the schedule…" →
-    // "Registration opens mid to late February".
+    // "Register mid to late February".
     const clause = reg.opens_note.split(/[;.]/)[0].trim();
     // Lowercase "Mid…"/"Early…" mid-sentence, but never a month's name.
     const lead = /^(mid|early|late|in|after|before|around|sometime)\b/i.test(clause)
       ? clause.charAt(0).toLowerCase() + clause.slice(1)
       : clause;
-    return { state: 'note', text: `Registration opens ${lead}` };
+    return { state: 'note', text: `Register ${lead}` };
   }
   return null;
 }
