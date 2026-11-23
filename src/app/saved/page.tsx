@@ -112,6 +112,8 @@ export default function SavedCampsPage() {
   const [savedCampIds, setSavedCampIds] = useState<string[]>([]);
   const [savedSessionIds, setSavedSessionIds] = useState<string[]>([]);
   const [camps, setCamps] = useState<Camp[]>([]);
+  /** Which saved items to show: everything, only camps, or only sessions. */
+  const [view, setView] = useState<'all' | 'camps' | 'sessions'>('all');
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -298,7 +300,7 @@ export default function SavedCampsPage() {
             <div className="mb-4">
               <p className="text-gray-600">Loading saved camps...</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {Array.from({ length: 4 }).map((_, idx) => (
                 <CampCardSkeleton key={`skeleton-${idx}`} />
               ))}
@@ -350,15 +352,39 @@ export default function SavedCampsPage() {
               </div>
             ) : (
               <>
-                <RegistrationPlan camps={camps} />
+                {/* All / Camps / Sessions: one tap to see just one kind. */}
+                <div role="tablist" aria-label="Show saved" className="mb-6 flex flex-wrap gap-2">
+                  {([
+                    ['all', 'All', camps.length + savedSessionIds.length],
+                    ['camps', 'Camps', camps.length],
+                    ['sessions', 'Sessions', savedSessionIds.length],
+                  ] as const).map(([value, label, count]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={view === value}
+                      onClick={() => setView(value)}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                        view === value
+                          ? 'bg-gray-900 text-white'
+                          : 'border border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      {label} <span className={view === value ? 'text-gray-300' : 'text-gray-500'}>{count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {view !== 'sessions' && <RegistrationPlan camps={camps} />}
 
                 {/* Saved Camps Section */}
-                {camps.length > 0 && (
+                {view !== 'sessions' && camps.length > 0 && (
                   <div className="mb-12">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
                       Saved Camps ({camps.length})
                     </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                       {camps.map((camp) => (
                         <CampCard key={camp.id} camp={camp} />
                       ))}
@@ -366,6 +392,8 @@ export default function SavedCampsPage() {
                   </div>
                 )}
 
+                {view === 'camps' ? null : (
+                <>
                 {/* Saved Sessions Section */}
                 {sessionsLoading && savedSessionIds.length > 0 && (
                   <div className="mb-4">
@@ -400,7 +428,7 @@ export default function SavedCampsPage() {
                           <h3 className="text-lg font-semibold text-gray-900 mb-4">
                             {label}
                           </h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                             {monthSessions.map((session) => {
                               const camp = session.camps;
                               if (!camp || !session.id) return null;
@@ -423,6 +451,18 @@ export default function SavedCampsPage() {
                 {!sessionsLoading && !sessionsError && savedSessionIds.length > 0 && sessions.length === 0 && (
                   <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 text-center">
                     <p className="text-gray-600">No saved sessions found.</p>
+                  </div>
+                )}
+                </>
+                )}
+
+                {/* An empty tab says so, rather than showing a blank page. */}
+                {((view === 'camps' && camps.length === 0) || (view === 'sessions' && savedSessionIds.length === 0)) && (
+                  <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-600">
+                    No saved {view} yet.{' '}
+                    <Link href="/" className="font-medium text-blue-600 hover:underline">
+                      Browse camps
+                    </Link>
                   </div>
                 )}
               </>

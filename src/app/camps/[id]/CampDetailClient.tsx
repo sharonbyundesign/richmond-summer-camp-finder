@@ -121,6 +121,8 @@ export default function CampDetailClient({
   const [loading] = useState(false);
   const [error] = useState<string | null>(null);
   const [savedSessionIds, setSavedSessionIds] = useState<Set<string>>(new Set());
+  /** On big camps, show only sessions that fit this age. */
+  const [sessionAge, setSessionAge] = useState<number | null>(null);
 
   // Load saved session IDs
   useEffect(() => {
@@ -251,6 +253,264 @@ export default function CampDetailClient({
   const badge = trustBadge(trust);
 
   const facts = campFacts(camp.camp_sessions as CampFactsSession[] | undefined);
+
+
+  /** One session card. Used flat for small camps and inside week groups for big ones. */
+  const renderSession = (session: CampSession, idx: number) => {
+                const isSaved = session.id ? savedSessionIds.has(session.id) : false;
+                const status = getSessionStatus(session, todayNY);
+                const isPast = status === 'past';
+                const fieldTextClass = isPast ? 'text-gray-500' : 'text-gray-900';
+
+                const handleSaveToggle = async (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  if (!session.id || isPast) return;
+
+                  const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
+                  let newSavedSessions: string[];
+
+                  if (isSaved) {
+                    newSavedSessions = savedSessions.filter((id: string) => id !== session.id);
+                    setSavedSessionIds(new Set(newSavedSessions));
+                    capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
+                    try {
+                      await fetch(`/api/sessions/${session.id}/save`, { method: 'DELETE' });
+                    } catch (err) {
+                      console.error('Error unsaving session:', err);
+                    }
+                  } else {
+                    newSavedSessions = [...savedSessions, session.id];
+                    setSavedSessionIds(new Set(newSavedSessions));
+                    capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
+
+                    try {
+                      await fetch(`/api/sessions/${session.id}/save`, { method: 'POST' });
+                    } catch (err) {
+                      console.error('Error saving session:', err);
+                    }
+                  }
+
+                  localStorage.setItem('savedSessions', JSON.stringify(newSavedSessions));
+                  window.dispatchEvent(new Event('savedSessionsUpdated'));
+                };
+
+                return (
+                  <div
+                    key={session.id || idx}
+                    className={`border border-gray-200 rounded-lg p-6 transition-shadow relative ${
+                      isPast ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'
+                    }`}
+                  >
+                    {/* Save Button */}
+                    <button
+                      onClick={handleSaveToggle}
+                      disabled={isPast}
+                      className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-50 rounded-full shadow-sm transition-all z-10 disabled:cursor-not-allowed"
+                      aria-label={isSaved ? 'Unsave session' : 'Save session'}
+                      title={isSaved ? 'Unsave session' : 'Save session'}
+                    >
+                      {isSaved ? (
+                        <svg
+                          className="w-5 h-5 text-red-500"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5 text-gray-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                          <h3 className={`text-xl font-semibold ${fieldTextClass}`}>
+                            {session.label || session.name || `Session ${idx + 1}`}
+                          </h3>
+                          {isPast && (
+                            <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+                              Ended
+                            </span>
+                          )}
+                          {status === 'in-progress' && (
+                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                              In progress
+                            </span>
+                          )}
+                        </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Dates */}
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Dates</p>
+                          <p className={fieldTextClass}>
+                            {formatDateRange(session.start_date, session.end_date)}
+                          </p>
+                        </div>
+
+                        {/* Times */}
+                        {session.start_time && session.end_time && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
+                            <p className={fieldTextClass}>
+                              {formatTime(session.start_time)} - {formatTime(session.end_time)}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Days of Week */}
+                        {session.days_of_week && session.days_of_week.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Days</p>
+                            <p className={fieldTextClass}>{formatDaysOfWeek(session.days_of_week)}</p>
+                          </div>
+                        )}
+
+                        {/* Where — only worth a line when the camp runs in more
+                            than one place; otherwise the header already says it. */}
+                        {visibleLocations(camp).length > 1 && (() => {
+                          const site = sessionLocation(camp, session);
+                          return (
+                            <div className="col-span-2">
+                              <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
+                              <p className={fieldTextClass}>
+                                {site ? siteLabel(site) ?? site.address ?? 'Location' : 'Not confirmed — check with the camp'}
+                              </p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Age Range */}
+                        {(session.min_age != null || session.max_age != null) && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Age Range</p>
+                            <p className={fieldTextClass}>
+                              Ages {session.min_age ?? '?'} - {session.max_age ?? '?'}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Price */}
+                        {session.price != null && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Price</p>
+                            <p className={`text-lg font-semibold ${isPast ? 'text-gray-500' : 'text-green-600'}`}>
+                              ${session.price.toFixed(2)}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Capacity */}
+                        {session.capacity != null && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">Capacity</p>
+                            <p className={fieldTextClass}>{session.capacity} spots</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Per-session provenance. A camp can have one week
+                          confirmed and the next five guessed, so this is per
+                          session rather than rolled up into the camp badge. */}
+                      {(() => {
+                        if (session.verification_status === undefined) return null;
+
+                        const low = lowConfidenceFields(session);
+                        const checkedAt = formatCheckedAt(session.last_verified_at ?? null);
+
+                        if (low.length > 0) {
+                          return (
+                            <p className="mt-4 text-xs text-amber-800 first-letter:uppercase">
+                              {formatFieldList(low)} unconfirmed — check with the camp before you
+                              register.
+                            </p>
+                          );
+                        }
+
+                        if (session.verification_status === 'camp_confirmed') {
+                          return (
+                            <p className="mt-4 text-xs text-green-700">
+                              Confirmed by the camp{checkedAt ? ` in ${checkedAt}` : ''}.
+                            </p>
+                          );
+                        }
+
+                        if (session.verification_status === 'human_checked' && checkedAt) {
+                          return (
+                            <p className="mt-4 text-xs text-gray-500">Checked {checkedAt}.</p>
+                          );
+                        }
+
+                        return null;
+                      })()}
+                      </div>
+                    </div>
+                  </div>
+                );
+  };
+
+  // Big camps (Steward lists 300+ sessions) are grouped by week with an age
+  // picker; a small camp's handful of cards reads fine as one grid.
+  const GROUP_AT = 12;
+  const grouped = sortedSessions.length > GROUP_AT;
+  const ageOptions = (() => {
+    const lo = Math.min(...sortedSessions.map((s) => s.min_age ?? Infinity));
+    const hi = Math.max(...sortedSessions.map((s) => s.max_age ?? -Infinity));
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi < lo) return [] as number[];
+    return Array.from({ length: Math.min(hi, 18) - lo + 1 }, (_, i) => lo + i);
+  })();
+  const visibleSessions =
+    sessionAge === null
+      ? sortedSessions
+      : sortedSessions.filter((s) => (s.min_age ?? 0) <= sessionAge && sessionAge <= (s.max_age ?? 99));
+  const sessionGroups = (() => {
+    const weeks = new Map<string, CampSession[]>();
+    const past: CampSession[] = [];
+    for (const s of visibleSessions) {
+      if (getSessionStatus(s, todayNY) === 'past') {
+        past.push(s);
+        continue;
+      }
+      const d = parseLocalDate(s.start_date);
+      if (!d) continue;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+      weeks.set(key, [...(weeks.get(key) ?? []), s]);
+    }
+    const byTime = (a: CampSession, b: CampSession) =>
+      (a.start_time ?? '99').localeCompare(b.start_time ?? '99') || (a.name ?? '').localeCompare(b.name ?? '');
+    const groups = Array.from(weeks.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, list]) => {
+        const friday = new Date(`${key}T12:00:00`);
+        friday.setDate(friday.getDate() + 4);
+        const fridayIso = `${friday.getFullYear()}-${String(friday.getMonth() + 1).padStart(2, '0')}-${String(friday.getDate()).padStart(2, '0')}`;
+        return { key, label: `Week of ${formatDateRange(key, fridayIso)}`, sessions: list.sort(byTime) };
+      });
+    if (past.length) {
+      groups.push({ key: 'past', label: `Past sessions (${dateOnly(past[0].end_date).slice(0, 4)})`, sessions: past });
+    }
+    return groups;
+  })();
 
   const reportUrl = feedbackMailto(`Incorrect info: ${camp.name}`);
 
@@ -491,218 +751,65 @@ export default function CampDetailClient({
               )}
             </div>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-              {sortedSessions.map((session, idx) => {
-                const isSaved = session.id ? savedSessionIds.has(session.id) : false;
-                const status = getSessionStatus(session, todayNY);
-                const isPast = status === 'past';
-                const fieldTextClass = isPast ? 'text-gray-500' : 'text-gray-900';
+          {grouped && (
+            <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                Your child&rsquo;s age
+                <select
+                  value={sessionAge ?? ''}
+                  onChange={(e) => setSessionAge(e.target.value === '' ? null : Number(e.target.value))}
+                  className="select-pill rounded-full border border-gray-300 bg-white py-1.5 pl-4 pr-10 text-sm text-gray-900"
+                >
+                  <option value="">Any age</option>
+                  {ageOptions.map((age) => (
+                    <option key={age} value={age}>
+                      {age}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="text-sm text-gray-500">
+                {visibleSessions.length} {visibleSessions.length === 1 ? 'session' : 'sessions'}
+                {sessionAge !== null ? ` for age ${sessionAge}` : ''} in {sessionGroups.length}{' '}
+                {sessionGroups.length === 1 ? 'group' : 'groups'}
+              </span>
+            </div>
+          )}
 
-                const handleSaveToggle = async (e: React.MouseEvent) => {
-                  e.preventDefault();
-                  if (!session.id || isPast) return;
-
-                  const savedSessions = JSON.parse(localStorage.getItem('savedSessions') || '[]');
-                  let newSavedSessions: string[];
-
-                  if (isSaved) {
-                    newSavedSessions = savedSessions.filter((id: string) => id !== session.id);
-                    setSavedSessionIds(new Set(newSavedSessions));
-                    capture('session_unsaved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
-
-                    try {
-                      await fetch(`/api/sessions/${session.id}/save`, { method: 'DELETE' });
-                    } catch (err) {
-                      console.error('Error unsaving session:', err);
-                    }
-                  } else {
-                    newSavedSessions = [...savedSessions, session.id];
-                    setSavedSessionIds(new Set(newSavedSessions));
-                    capture('session_saved', { session_id: session.id, camp_id: camp?.id, camp_name: camp?.name });
-
-                    try {
-                      await fetch(`/api/sessions/${session.id}/save`, { method: 'POST' });
-                    } catch (err) {
-                      console.error('Error saving session:', err);
-                    }
-                  }
-
-                  localStorage.setItem('savedSessions', JSON.stringify(newSavedSessions));
-                  window.dispatchEvent(new Event('savedSessionsUpdated'));
-                };
-
-                return (
-                  <div
-                    key={session.id || idx}
-                    className={`border border-gray-200 rounded-lg p-6 transition-shadow relative ${
-                      isPast ? 'opacity-60 pointer-events-none' : 'hover:shadow-md'
-                    }`}
-                  >
-                    {/* Save Button */}
-                    <button
-                      onClick={handleSaveToggle}
-                      disabled={isPast}
-                      className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-50 rounded-full shadow-sm transition-all z-10 disabled:cursor-not-allowed"
-                      aria-label={isSaved ? 'Unsave session' : 'Save session'}
-                      title={isSaved ? 'Unsave session' : 'Save session'}
-                    >
-                      {isSaved ? (
-                        <svg
-                          className="w-5 h-5 text-red-500"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-5 h-5 text-gray-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                      )}
-                    </button>
-
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <h3 className={`text-xl font-semibold ${fieldTextClass}`}>
-                            {session.label || session.name || `Session ${idx + 1}`}
-                          </h3>
-                          {isPast && (
-                            <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
-                              Ended
-                            </span>
-                          )}
-                          {status === 'in-progress' && (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                              In progress
-                            </span>
-                          )}
-                        </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Dates */}
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 mb-1">Dates</p>
-                          <p className={fieldTextClass}>
-                            {formatDateRange(session.start_date, session.end_date)}
-                          </p>
-                        </div>
-
-                        {/* Times */}
-                        {session.start_time && session.end_time && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
-                            <p className={fieldTextClass}>
-                              {formatTime(session.start_time)} - {formatTime(session.end_time)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Days of Week */}
-                        {session.days_of_week && session.days_of_week.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">Days</p>
-                            <p className={fieldTextClass}>{formatDaysOfWeek(session.days_of_week)}</p>
-                          </div>
-                        )}
-
-                        {/* Where — only worth a line when the camp runs in more
-                            than one place; otherwise the header already says it. */}
-                        {visibleLocations(camp).length > 1 && (() => {
-                          const site = sessionLocation(camp, session);
-                          return (
-                            <div className="col-span-2">
-                              <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
-                              <p className={fieldTextClass}>
-                                {site ? siteLabel(site) ?? site.address ?? 'Location' : 'Not confirmed — check with the camp'}
-                              </p>
-                            </div>
-                          );
-                        })()}
-
-                        {/* Age Range */}
-                        {(session.min_age != null || session.max_age != null) && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">Age Range</p>
-                            <p className={fieldTextClass}>
-                              Ages {session.min_age ?? '?'} - {session.max_age ?? '?'}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Price */}
-                        {session.price != null && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">Price</p>
-                            <p className={`text-lg font-semibold ${isPast ? 'text-gray-500' : 'text-green-600'}`}>
-                              ${session.price.toFixed(2)}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Capacity */}
-                        {session.capacity != null && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-500 mb-1">Capacity</p>
-                            <p className={fieldTextClass}>{session.capacity} spots</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Per-session provenance. A camp can have one week
-                          confirmed and the next five guessed, so this is per
-                          session rather than rolled up into the camp badge. */}
-                      {(() => {
-                        if (session.verification_status === undefined) return null;
-
-                        const low = lowConfidenceFields(session);
-                        const checkedAt = formatCheckedAt(session.last_verified_at ?? null);
-
-                        if (low.length > 0) {
-                          return (
-                            <p className="mt-4 text-xs text-amber-800 first-letter:uppercase">
-                              {formatFieldList(low)} unconfirmed — check with the camp before you
-                              register.
-                            </p>
-                          );
-                        }
-
-                        if (session.verification_status === 'camp_confirmed') {
-                          return (
-                            <p className="mt-4 text-xs text-green-700">
-                              Confirmed by the camp{checkedAt ? ` in ${checkedAt}` : ''}.
-                            </p>
-                          );
-                        }
-
-                        if (session.verification_status === 'human_checked' && checkedAt) {
-                          return (
-                            <p className="mt-4 text-xs text-gray-500">Checked {checkedAt}.</p>
-                          );
-                        }
-
-                        return null;
-                      })()}
-                      </div>
-                    </div>
+          {grouped ? (
+            <div className="divide-y divide-gray-200 border-y border-gray-200">
+              {sessionGroups.map((group, gi) => (
+                <details key={group.key} open={gi === 0 || sessionAge !== null ? true : undefined} className="group/week">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-4 [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center gap-2">
+                      <svg aria-hidden="true" className="h-4 w-4 text-gray-500 transition-transform group-open/week:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span className="text-lg font-semibold text-gray-900">{group.label}</span>
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {group.sessions.length} {group.sessions.length === 1 ? 'session' : 'sessions'}
+                    </span>
+                  </summary>
+                  <div className="grid grid-cols-1 gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+                    {group.sessions.map((session) => renderSession(session, sortedSessions.indexOf(session)))}
                   </div>
-                );
-              })}
-          </div>
+                </details>
+              ))}
+              {sessionGroups.length === 0 && (
+                <p className="py-6 text-sm text-gray-600">
+                  No sessions list age {sessionAge}.{' '}
+                  <button type="button" onClick={() => setSessionAge(null)} className="font-medium text-blue-600 hover:underline">
+                    Show all ages
+                  </button>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+              {sortedSessions.map((session, idx) => renderSession(session, idx))}
+            </div>
+          )}
         </div>
         )}
 

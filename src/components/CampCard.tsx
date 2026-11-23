@@ -227,8 +227,6 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
           </div>
         )}
 
-        <TrustBadge badge={badge} className="absolute left-3 top-3 shadow-sm" />
-
         {tags.length > 0 && (
           <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
             {tags.slice(0, MAX_TAGS).map((tag) => (
@@ -310,15 +308,19 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
           </p>
         )}
 
-        {(regPill || registration?.fills_fast) && (
+        {/* Dates provenance ("2026 dates") and registration share one row
+            under the sessions line, where they describe what's above them. */}
+        {(badge || regPill || registration?.fills_fast) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
+            <TrustBadge badge={badge} />
             {regPill && (
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${REG_PILL_STYLE[regPill.state]}`}>
                 {regPill.text}
               </span>
             )}
             {registration?.fills_fast && regPill?.state !== 'full' && (
-              <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M11.3 1.05a.75.75 0 01.45.82L10.9 7h4.35a.75.75 0 01.56 1.25l-7.5 8.5a.75.75 0 01-1.3-.62L7.85 11H3.5a.75.75 0 01-.56-1.25l7.5-8.5a.75.75 0 01.86-.2z" /></svg>
                 Fills fast
               </span>
             )}
