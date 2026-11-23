@@ -7,7 +7,7 @@ import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
 import SiteHeader from '@/components/SiteHeader';
 import RegistrationPlan from '@/components/RegistrationPlan';
-import { parseLocalDate } from '@/lib/v2/weeks';
+import { parseLocalDate, startOfWeek, toKey } from '@/lib/v2/weeks';
 import { campInterestImageUrl } from '@/lib/campInterestImage';
 import type { CampRegistration } from '@/types/camp';
 
@@ -64,51 +64,85 @@ interface SavedSession {
   };
 }
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-interface MonthGroup {
+interface WeekGroup {
   key: string;
   label: string;
-  monthSessions: SavedSession[];
+  weekSessions: SavedSession[];
 }
 
-// Group sessions by the month/year of their start date, ordered chronologically.
-function groupSessionsByMonth(sessions: SavedSession[]): MonthGroup[] {
-  const groups = new Map<string, MonthGroup>();
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * "Week of Jun 1–5", "Week of Jun 28 – Jul 2": from `from` (the Monday, or the
+ * first session's start when the week opens late, as after Memorial Day) to
+ * that week's Friday.
+ */
+function weekLabel(monday: Date, from: Date = monday): string {
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  const a = `${SHORT_MONTHS[from.getMonth()]} ${from.getDate()}`;
+  return friday.getMonth() === from.getMonth()
+    ? `Week of ${a}–${friday.getDate()}`
+    : `Week of ${a} – ${SHORT_MONTHS[friday.getMonth()]} ${friday.getDate()}`;
+}
+
+/**
+ * Saved sessions by the week they start, so the options for one week sit side
+ * by side: a parent picks one per week. Weeks between the first and last saved
+ * week with nothing saved come back empty, so gaps in the summer show too.
+ */
+function groupSessionsByWeek(sessions: SavedSession[]): WeekGroup[] {
+  const groups = new Map<string, WeekGroup>();
   const undated: SavedSession[] = [];
 
   sessions.forEach((session) => {
     // parseLocalDate: new Date('2027-06-01') is UTC midnight, which in
-    // Richmond is May 31, so June sessions landed under May.
+    // Richmond is the day before.
     const date = session.start_date ? parseLocalDate(session.start_date) : null;
     if (!date || isNaN(date.getTime())) {
       undated.push(session);
       return;
     }
-
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const key = `${year}-${String(month).padStart(2, '0')}`;
-
-    if (!groups.has(key)) {
-      groups.set(key, {
-        key,
-        label: `${MONTH_NAMES[month]} ${year}`,
-        monthSessions: [],
-      });
-    }
-    groups.get(key)!.monthSessions.push(session);
+    const monday = startOfWeek(date);
+    const key = toKey(monday);
+    if (!groups.has(key)) groups.set(key, { key, label: '', weekSessions: [] });
+    groups.get(key)!.weekSessions.push(session);
   });
 
-  const ordered = Array.from(groups.values()).sort((a, b) =>
-    a.key.localeCompare(b.key)
+  groups.forEach((g) => {
+    const monday = parseLocalDate(g.key)!;
+    const firstStart = g.weekSessions
+      .map((x) => parseLocalDate(x.start_date)!)
+      .reduce((min, d) => (d < min ? d : min));
+    g.label = weekLabel(monday, firstStart > monday && firstStart.getDay() <= 5 ? firstStart : monday);
+  });
+
+  // Earliest start first within a week, then shortest (a half day before a full one).
+  groups.forEach((g) =>
+    g.weekSessions.sort(
+      (x, y) =>
+        (x.start_time ?? '99').localeCompare(y.start_time ?? '99') ||
+        (x.end_time ?? '99').localeCompare(y.end_time ?? '99'),
+    ),
   );
 
+  const ordered = Array.from(groups.values()).sort((x, y) => x.key.localeCompare(y.key));
+
+  // Fill the gaps within one summer (not across years of saved sessions).
+  if (ordered.length > 1) {
+    const first = parseLocalDate(ordered[0].key)!;
+    const last = parseLocalDate(ordered[ordered.length - 1].key)!;
+    if (first.getFullYear() === last.getFullYear()) {
+      for (const d = new Date(first); d < last; d.setDate(d.getDate() + 7)) {
+        const key = toKey(d);
+        if (!groups.has(key)) ordered.push({ key, label: weekLabel(new Date(d)), weekSessions: [] });
+      }
+      ordered.sort((x, y) => x.key.localeCompare(y.key));
+    }
+  }
+
   if (undated.length > 0) {
-    ordered.push({ key: 'undated', label: 'Dates TBD', monthSessions: undated });
+    ordered.push({ key: 'undated', label: 'Dates TBD', weekSessions: undated });
   }
 
   return ordered;
@@ -427,30 +461,42 @@ export default function SavedCampsPage() {
                       Saved Sessions ({sessions.length})
                     </h2>
 
-                    {/* Session Cards grouped by month */}
-                    <div className="space-y-10">
-                      {groupSessionsByMonth(sessions).map(({ key, label, monthSessions }) => (
-                        <div key={key}>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            {label}
-                          </h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                            {monthSessions.map((session) => {
-                              const camp = session.camps;
-                              if (!camp || !session.id) return null;
-                              return (
-                                <SessionCard
-                                  key={session.id}
-                                  session={session}
-                                  campId={camp.id}
-                                  campName={camp.name}
-                                  campImage={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url ?? null}
-                                />
-                              );
-                            })}
+                    {/* One row per week, so a week's options can be compared side by side. */}
+                    <div className="space-y-8">
+                      {groupSessionsByWeek(sessions).map(({ key, label, weekSessions }) =>
+                        weekSessions.length === 0 ? (
+                          <div key={key} className="flex items-baseline gap-3 border-t border-gray-200 pt-4">
+                            <h3 className="text-base font-semibold text-gray-400">{label}</h3>
+                            <span className="text-sm text-gray-400">Nothing saved</span>
                           </div>
-                        </div>
-                      ))}
+                        ) : (
+                          <div key={key} className="border-t border-gray-200 pt-4">
+                            <div className="mb-4 flex flex-wrap items-baseline gap-3">
+                              <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
+                              {key !== 'undated' && weekSessions.length > 1 && (
+                                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                                  {weekSessions.length} options
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                              {weekSessions.map((session) => {
+                                const camp = session.camps;
+                                if (!camp || !session.id) return null;
+                                return (
+                                  <SessionCard
+                                    key={session.id}
+                                    session={session}
+                                    campId={camp.id}
+                                    campName={camp.name}
+                                    campImage={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url ?? null}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ),
+                      )}
                     </div>
                   </div>
                 )}
