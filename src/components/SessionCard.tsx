@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { parseLocalDate } from '@/lib/v2/weeks';
 
 interface SessionCardProps {
@@ -21,10 +22,13 @@ interface SessionCardProps {
   };
   campId: string;
   campName: string;
+  /** The camp's photo, so sessions from different camps are easy to tell apart. */
+  campImage?: string | null;
 }
 
-export default function SessionCard({ session, campId, campName }: SessionCardProps) {
+export default function SessionCard({ session, campId, campName, campImage }: SessionCardProps) {
   const [isSaved, setIsSaved] = useState(false);
+  const [image, setImage] = useState<string | null>(campImage ?? null);
 
   // Check if session is saved on mount
   useEffect(() => {
@@ -57,10 +61,15 @@ export default function SessionCard({ session, campId, campName }: SessionCardPr
     }
   };
 
-  const formatDaysOfWeek = (days?: string[]) => {
-    if (!days || days.length === 0) return '';
-    return days.join(', ');
-  };
+  // "T, W, T, F": one letter a day, in week order. The full names go in the
+  // title/aria-label, since T and S are ambiguous on their own.
+  const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const sortedDays = (days?: string[]) =>
+    (days ?? [])
+      .map((d) => d.trim())
+      .sort((a, b) => DAY_ORDER.indexOf(a.toLowerCase()) - DAY_ORDER.indexOf(b.toLowerCase()));
+  const formatDaysOfWeek = (days?: string[]) =>
+    sortedDays(days).map((d) => d.charAt(0).toUpperCase()).join(', ');
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -100,12 +109,27 @@ export default function SessionCard({ session, campId, campName }: SessionCardPr
   return (
     <Link
       href={`/camps/${campId}`}
-      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 p-6 block relative"
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-200 overflow-hidden block relative"
     >
+      {/* The camp's photo, as on its camp card: the quickest way to see which
+          camp a session belongs to in a list of saved ones. */}
+      <div className="relative h-[88px] w-full bg-gray-100">
+        {image && (
+          <Image
+            src={image}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 33vw, 25vw"
+            className="object-cover"
+            onError={() => setImage(null)}
+          />
+        )}
+      </div>
+
       {/* Save Button */}
       <button
         onClick={handleSaveToggle}
-        className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-all z-10"
+        className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-all z-10"
         aria-label={isSaved ? 'Unsave session' : 'Save session'}
         title={isSaved ? 'Unsave session' : 'Save session'}
       >
@@ -138,7 +162,7 @@ export default function SessionCard({ session, campId, campName }: SessionCardPr
         )}
       </button>
 
-      <div>
+      <div className="p-6">
         <div className="mb-2">
           <p className="text-xs text-gray-500 mb-1">Camp</p>
           <p className="text-sm font-medium text-gray-700">{campName}</p>
@@ -168,7 +192,13 @@ export default function SessionCard({ session, campId, campName }: SessionCardPr
           {session.days_of_week && session.days_of_week.length > 0 && (
             <div>
               <p className="text-xs font-medium text-gray-500 mb-1">Days</p>
-              <p className="text-sm text-gray-900">{formatDaysOfWeek(session.days_of_week)}</p>
+              <p
+                className="text-sm text-gray-900"
+                title={sortedDays(session.days_of_week).join(', ')}
+                aria-label={sortedDays(session.days_of_week).join(', ')}
+              >
+                {formatDaysOfWeek(session.days_of_week)}
+              </p>
             </div>
           )}
 

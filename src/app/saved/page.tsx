@@ -7,6 +7,8 @@ import CampCardSkeleton from '@/components/CampCardSkeleton';
 import SessionCard from '@/components/SessionCard';
 import SiteHeader from '@/components/SiteHeader';
 import RegistrationPlan from '@/components/RegistrationPlan';
+import { parseLocalDate } from '@/lib/v2/weeks';
+import { campInterestImageUrl } from '@/lib/campInterestImage';
 import type { CampRegistration } from '@/types/camp';
 
 interface Camp {
@@ -57,6 +59,8 @@ interface SavedSession {
     id: string;
     name: string;
     location?: string;
+    image_url?: string | null;
+    camp_interests?: Array<{ id?: string; tag?: string; interest_name?: string }>;
   };
 }
 
@@ -77,7 +81,9 @@ function groupSessionsByMonth(sessions: SavedSession[]): MonthGroup[] {
   const undated: SavedSession[] = [];
 
   sessions.forEach((session) => {
-    const date = session.start_date ? new Date(session.start_date) : null;
+    // parseLocalDate: new Date('2027-06-01') is UTC midnight, which in
+    // Richmond is May 31, so June sessions landed under May.
+    const date = session.start_date ? parseLocalDate(session.start_date) : null;
     if (!date || isNaN(date.getTime())) {
       undated.push(session);
       return;
@@ -438,6 +444,7 @@ export default function SavedCampsPage() {
                                   session={session}
                                   campId={camp.id}
                                   campName={camp.name}
+                                  campImage={campInterestImageUrl(camp.id, camp.camp_interests) ?? camp.image_url ?? null}
                                 />
                               );
                             })}

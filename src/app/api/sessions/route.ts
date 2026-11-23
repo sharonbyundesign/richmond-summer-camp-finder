@@ -42,7 +42,13 @@ export async function GET(request: Request) {
         camps(
           id,
           name,
-          location
+          location,
+          image_url,
+          camp_interests(
+            id,
+            tag,
+            interest_name
+          )
         )
       `)
       .in('id', sessionIds)
