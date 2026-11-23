@@ -589,9 +589,27 @@ export default function CampDetailClient({
 
             {/* Camp Info, below the image */}
             <div className="flex-1 p-6 flex flex-col">
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-bold text-gray-900">{camp.name}</h1>
-                <TrustBadge badge={badge} />
+              {/* Name left, the one outbound CTA right, so it's in reach
+                  without scrolling past registration and the description. */}
+              <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-3xl font-bold text-gray-900">{camp.name}</h1>
+                  <TrustBadge badge={badge} />
+                </div>
+              {camp.website_url && (
+                <a
+                  href={camp.website_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
+                  className="inline-flex shrink-0 self-start items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Visit Website
+                  <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
+                  </svg>
+                </a>
+              )}
               </div>
 
               {/* Several sites: list them, because "one address" would tell a
@@ -604,6 +622,8 @@ export default function CampDetailClient({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     {visibleLocations(camp).length} locations
+                    <span aria-hidden="true" className="text-gray-300">·</span>
+                    <GoogleReviewsLink camp={camp} />
                   </p>
                   <ul className="mt-1.5 space-y-0.5 pl-7 text-sm">
                     {visibleLocations(camp).map((site) => (
@@ -616,14 +636,21 @@ export default function CampDetailClient({
                     ))}
                   </ul>
                 </div>
-              ) : camp.location && (
-                <p className="text-gray-600 mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {camp.location}
-                </p>
+              ) : (
+                <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-600">
+                  {camp.location && (
+                    <p className="flex items-center gap-2">
+                      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {camp.location}
+                    </p>
+                  )}
+                  {camp.location && <span aria-hidden="true" className="hidden text-gray-300 sm:inline">·</span>}
+                  {/* Secondary by design: it must not compete with Visit Website. */}
+                  <GoogleReviewsLink camp={camp} />
+                </div>
               )}
 
               {/* The four things parents filter on, answered before they scroll. */}
@@ -646,33 +673,13 @@ export default function CampDetailClient({
                 </dl>
               )}
 
-              <RegistrationBlock camp={camp} />
-
+              {/* What the camp is, then when to register for it. */}
               {camp.description && (
-                <p className="text-gray-700 mb-4 leading-relaxed">{camp.description}</p>
+                <p className="mb-4 text-gray-700 leading-relaxed">{camp.description}</p>
               )}
 
-              {/* Reviews left, the registration CTA right — where the eye
-                  lands last, and where the external arrow says it leaves. */}
-              <div className="mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-                {/* Secondary by design — it must not compete with the registration CTA. */}
-                <GoogleReviewsLink camp={camp} />
+              <RegistrationBlock camp={camp} />
 
-                {camp.website_url && (
-                  <a
-                    href={camp.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => capture('camp_website_visited', { camp_id: camp.id, camp_name: camp.name })}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Visit Website
-                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
-                    </svg>
-                  </a>
-                )}
-              </div>
             </div>
           </div>
         </div>
