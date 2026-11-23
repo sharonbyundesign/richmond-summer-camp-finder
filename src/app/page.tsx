@@ -529,7 +529,7 @@ export default function Home() {
           modal any more: in the user test parents went looking for price and
           full/half day even while those were behind it. */}
       <div className="border-b border-gray-200 bg-white px-4 pb-4 pt-5 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
+        <div className="max-w-5xl">
           {hydrated && filtersHydrated ? (
             <SearchBar
               state={pill}

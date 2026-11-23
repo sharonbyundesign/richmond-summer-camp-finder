@@ -152,7 +152,7 @@ export default function SearchBar({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="relative block">
+      <label className="relative block max-w-3xl">
         <span className="sr-only">Search camps</span>
         <svg
           aria-hidden="true"

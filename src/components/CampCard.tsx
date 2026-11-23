@@ -227,8 +227,6 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
           </div>
         )}
 
-        <TrustBadge badge={badge} className="absolute left-3 top-3 shadow-sm" />
-
         {tags.length > 0 && (
           <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
             {tags.slice(0, MAX_TAGS).map((tag) => (
@@ -310,8 +308,11 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
           </p>
         )}
 
-        {(regPill || registration?.fills_fast) && (
+        {/* Dates provenance ("2026 dates") and registration share one row
+            under the sessions line, where they describe what's above them. */}
+        {(badge || regPill || registration?.fills_fast) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
+            <TrustBadge badge={badge} />
             {regPill && (
               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${REG_PILL_STYLE[regPill.state]}`}>
                 {regPill.text}
