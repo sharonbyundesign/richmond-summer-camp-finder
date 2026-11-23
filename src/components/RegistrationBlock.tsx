@@ -61,7 +61,10 @@ export default function RegistrationBlock({
               {reg.priority_opens_on ? 'Opens to everyone' : 'Registration opens'}
             </li>
           )}
-          {!reg.opens_on && pill && <li className="font-medium">{pill.text}</li>}
+          {/* "Register now" is the link beside this, so the status says it plainly. */}
+          {!reg.opens_on && pill && (
+            <li className="font-medium">{pill.state === 'open' ? 'Open now' : pill.text}</li>
+          )}
           {reg.opens_note && reg.opens_on && <li className="text-gray-600">{reg.opens_note}</li>}
         </ul>
         {reminders.length > 0 && (
