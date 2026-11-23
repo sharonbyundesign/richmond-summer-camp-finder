@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import UpdatesSignup from '@/components/UpdatesSignup';
-import { FOOTER_SIGNUP_FIELD_ID } from '@/lib/signup';
 import FeedbackLink from '@/components/FeedbackLink';
 import FooterLift from '@/components/FooterLift';
 
@@ -13,15 +11,9 @@ export default function Footer() {
   return (
     <footer className="z-20 border-t border-gray-200 bg-white md:sticky md:bottom-0">
       <FooterLift />
-      <div className="flex flex-col items-center justify-between gap-3 px-4 py-4 text-sm text-gray-500 sm:flex-row sm:px-6 lg:px-8">
-        {/* The Scouty / Beta wordmark used to sit here. Removed: the footer is
-            sticky on desktop, so the row has one line of room and the signup
-            needs it more than a second logo under the header's. */}
-        <UpdatesSignup
-          source="footer"
-          layout="inline"
-          fieldId={FOOTER_SIGNUP_FIELD_ID}
-        />
+      {/* The email signup used to sit here; it now opens from the top banner,
+          so the sticky footer is one quiet row of links. */}
+      <div className="flex flex-col items-center justify-center gap-3 px-4 py-3 text-sm text-gray-500 sm:flex-row sm:px-6 lg:px-8">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
           {/* Rendered at build time, so it moves on with each deploy rather
               than freezing on the year this was written. */}

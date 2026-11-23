@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 /**
  * Published while any part of the footer is on screen, so the mobile Map/List
- * toggle can rest above it instead of landing on the email field and the legal
+ * toggle can rest above it instead of landing on the legal
  * links. Mirrors --consent-height from ConsentBanner; the toggle adds both.
  */
 const FOOTER_VISIBLE_VAR = '--footer-visible';
