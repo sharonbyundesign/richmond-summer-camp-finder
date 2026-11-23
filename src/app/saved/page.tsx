@@ -392,6 +392,10 @@ export default function SavedCampsPage() {
               </div>
             ) : (
               <>
+                {/* The plan sits above the filter and always shows: it's a summary
+                    of the summer, not one of the lists the pills switch between. */}
+                <RegistrationPlan camps={camps} />
+
                 {/* All / Camps / Sessions: one tap to see just one kind. */}
                 <div role="tablist" aria-label="Show saved" className="mb-6 flex flex-wrap gap-2">
                   {([
@@ -416,7 +420,6 @@ export default function SavedCampsPage() {
                   ))}
                 </div>
 
-                {view !== 'sessions' && <RegistrationPlan camps={camps} />}
 
                 {/* Saved Camps Section */}
                 {view !== 'sessions' && camps.length > 0 && (
