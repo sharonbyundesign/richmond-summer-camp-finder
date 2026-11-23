@@ -673,11 +673,12 @@ export default function CampDetailClient({
                 </dl>
               )}
 
-              <RegistrationBlock camp={camp} />
-
+              {/* What the camp is, then when to register for it. */}
               {camp.description && (
-                <p className="text-gray-700 leading-relaxed">{camp.description}</p>
+                <p className="mb-4 text-gray-700 leading-relaxed">{camp.description}</p>
               )}
+
+              <RegistrationBlock camp={camp} />
 
             </div>
           </div>
