@@ -42,11 +42,11 @@ export default function RegistrationPlan({ camps }: { camps: PlanCamp[] }) {
   const reminders = rows.flatMap((r) => remindersFor(r.camp, today));
 
   return (
-    <section className="mb-12 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
+    <section className="mb-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Your registration plan</h2>
-          <p className="mt-1 text-sm text-gray-600">When registration opens for the camps you saved, soonest first.</p>
+          <h2 className="text-lg font-semibold text-gray-900">Your registration plan</h2>
+          <p className="mt-0.5 text-sm text-gray-600">When registration opens for the camps you saved, soonest first.</p>
         </div>
         {reminders.length > 0 && (
           <button
@@ -65,7 +65,7 @@ export default function RegistrationPlan({ camps }: { camps: PlanCamp[] }) {
         )}
       </div>
 
-      <ul className="mt-4 divide-y divide-gray-100">
+      <ul className="mt-3 divide-y divide-gray-100">
         {rows.map(({ camp, reg, pill, next }) => (
           <li key={camp.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
             {/* The arrow says "this is a link" without making the name blue. */}

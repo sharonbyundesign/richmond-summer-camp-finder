@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { capture } from '@/lib/analytics';
 import { BETA_BANNER_KEY, BETA_BANNER_DISMISSED_CLASS } from '@/lib/betaBanner';
-import { FOOTER_SIGNUP_FIELD_ID } from '@/lib/signup';
+import UpdatesSignup from '@/components/UpdatesSignup';
+
+const SIGNUP_FIELD_ID = 'banner-signup-email';
 
 /**
  * The top bar, now advertising the email list rather than carrying the beta notice.
@@ -21,6 +23,7 @@ import { FOOTER_SIGNUP_FIELD_ID } from '@/lib/signup';
  */
 export default function BetaBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     try {
@@ -33,18 +36,17 @@ export default function BetaBanner() {
   if (dismissed) return null;
 
   /**
-   * Second action: send people to the one signup form rather than opening a
-   * second one. On desktop the footer is sticky, so the field is already on
-   * screen and this is really just a focus; on phones it scrolls there.
+   * Second action: the signup form, in a dialog. It used to live in the footer,
+   * where it took a permanent row of a sticky bar; now this banner is the one
+   * place to subscribe. Native <dialog>, as in NotifyMeButton: showModal gives
+   * focus trapping, Escape to close and an inert page behind it.
    */
-  const focusSignup = () => {
+  const openSignup = () => {
     capture('beta_signup_clicked');
-    const field = document.getElementById(FOOTER_SIGNUP_FIELD_ID);
-    if (!field) return;
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    field.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
-    field.focus({ preventScroll: true });
+    dialogRef.current?.showModal();
+    document.getElementById(SIGNUP_FIELD_ID)?.focus();
   };
+  const closeSignup = () => dialogRef.current?.close();
 
   const dismiss = () => {
     capture('beta_banner_dismissed');
@@ -68,7 +70,7 @@ export default function BetaBanner() {
         <span className="hidden sm:inline">We add new Richmond camps all the time &mdash; hear about them first &rarr;  </span>
         <button
           type="button"
-          onClick={focusSignup}
+          onClick={openSignup}
           className="font-medium underline underline-offset-2 hover:text-blue-700"
         >
           Get updates
@@ -86,6 +88,34 @@ export default function BetaBanner() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="banner-signup-heading"
+        // A click whose target is the dialog itself landed on the backdrop.
+        onClick={(event) => {
+          if (event.target === dialogRef.current) closeSignup();
+        }}
+        className="w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white p-0 text-left text-gray-900 shadow-xl backdrop:bg-black/30"
+      >
+        <div className="relative p-6">
+          <button
+            type="button"
+            onClick={closeSignup}
+            aria-label="Close"
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <h2 id="banner-signup-heading" className="pr-10 text-lg font-semibold">
+            Hear about new camps first
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">We add Richmond camps all the time.</p>
+          <UpdatesSignup source="banner" fieldId={SIGNUP_FIELD_ID} className="mt-4" />
+        </div>
+      </dialog>
     </div>
   );
 }

@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
       </p>
       <ul className="list-disc space-y-1 pl-6">
         <li>
-          <strong>Camp updates</strong> — the sign-up in the footer and banner. We store your email
+          <strong>Camp updates</strong> — the sign-up that opens from the banner at the top of the page, or the one shown when a search finds no camps. We store your email
           address and which of those places you used.
         </li>
         <li>
