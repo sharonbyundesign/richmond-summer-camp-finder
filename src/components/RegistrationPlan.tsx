@@ -67,8 +67,21 @@ export default function RegistrationPlan({ camps }: { camps: PlanCamp[] }) {
       <ul className="mt-4 divide-y divide-gray-100">
         {rows.map(({ camp, reg, pill, next }) => (
           <li key={camp.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-            <Link href={`/camps/${camp.id}`} className="font-medium text-gray-900 hover:text-blue-700">
+            {/* The arrow says "this is a link" without making the name blue. */}
+            <Link
+              href={`/camps/${camp.id}`}
+              className="group inline-flex items-center gap-1 font-medium text-gray-900 hover:text-blue-700"
+            >
               {camp.name}
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4 flex-shrink-0 text-gray-400 transition-colors group-hover:text-blue-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M9 7h8v8" />
+              </svg>
             </Link>
             <span className="text-sm text-gray-700">
               {next.length > 0
