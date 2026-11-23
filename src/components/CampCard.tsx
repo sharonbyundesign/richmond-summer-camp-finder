@@ -319,7 +319,8 @@ export default function CampCard({ camp, distanceMiles, sites, onHoverChange }: 
               </span>
             )}
             {registration?.fills_fast && regPill?.state !== 'full' && (
-              <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800">
+                <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M11.3 1.05a.75.75 0 01.45.82L10.9 7h4.35a.75.75 0 01.56 1.25l-7.5 8.5a.75.75 0 01-1.3-.62L7.85 11H3.5a.75.75 0 01-.56-1.25l7.5-8.5a.75.75 0 01.86-.2z" /></svg>
                 Fills fast
               </span>
             )}

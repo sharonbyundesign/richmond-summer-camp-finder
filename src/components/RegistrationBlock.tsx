@@ -36,7 +36,8 @@ export default function RegistrationBlock({
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold text-gray-900">Registration</h2>
         {reg.fills_fast && (
-          <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800">
+          <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800">
+            <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M11.3 1.05a.75.75 0 01.45.82L10.9 7h4.35a.75.75 0 01.56 1.25l-7.5 8.5a.75.75 0 01-1.3-.62L7.85 11H3.5a.75.75 0 01-.56-1.25l7.5-8.5a.75.75 0 01.86-.2z" /></svg>
             Fills fast
           </span>
         )}
